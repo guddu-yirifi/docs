@@ -1,0 +1,490 @@
+---
+title: "JavaScript SDK"
+description: "Full-featured SDK for Node.js and browser environments"
+---
+
+# JavaScript SDK
+
+The Yirifi.ai JavaScript SDK provides a comprehensive, type-safe interface for all Yirifi.ai APIs with support for Node.js and browser environments.
+
+## Installation
+
+<CodeGroup>
+```bash npm
+npm install @yirifi/api
+```
+
+```bash yarn  
+yarn add @yirifi/api
+```
+
+```bash pnpm
+pnpm add @yirifi/api
+```
+</CodeGroup>
+
+## Quick Start
+
+```javascript
+import { YirifiAPI } from '@yirifi/api';
+
+const yirifi = new YirifiAPI({
+  apiKey: 'your-api-key',
+  // Optional: specify environment
+  baseURL: 'https://api.yirifi.ai/v1' // default
+});
+
+// Get all categories
+const categories = await yirifi.categories.list();
+console.log(categories);
+
+// Create a new category
+const newCategory = await yirifi.categories.create({
+  name: 'Technology',
+  description: 'Tech-related content'
+});
+```
+
+## Configuration
+
+### Basic Configuration
+
+```javascript
+const yirifi = new YirifiAPI({
+  apiKey: 'your-api-key',
+  baseURL: 'https://api.yirifi.ai/v1', // Optional
+  timeout: 30000, // 30 seconds, default: 60000
+  retries: 3, // Default: 3
+  rateLimitStrategy: 'backoff' // 'backoff' | 'throw' | 'ignore'
+});
+```
+
+### Advanced Configuration
+
+```javascript
+const yirifi = new YirifiAPI({
+  apiKey: process.env.YIRIFI_API_KEY,
+  
+  // Custom fetch implementation
+  fetch: customFetch,
+  
+  // Request/response interceptors
+  interceptors: {
+    request: (config) => {
+      console.log('Making request:', config);
+      return config;
+    },
+    response: (response) => {
+      console.log('Received response:', response);
+      return response;
+    }
+  },
+  
+  // Error handling
+  onError: (error) => {
+    console.error('API Error:', error);
+    // Custom error tracking
+    trackError(error);
+  },
+  
+  // Rate limiting
+  rateLimiting: {
+    strategy: 'backoff',
+    maxRetries: 5,
+    backoffFactor: 2
+  }
+});
+```
+
+## API Reference
+
+### Categories
+
+<CodeGroup>
+```javascript List Categories
+const categories = await yirifi.categories.list({
+  page: 1,
+  limit: 50,
+  search: 'technology'
+});
+```
+
+```javascript Get Category
+const category = await yirifi.categories.get('cat_123');
+```
+
+```javascript Create Category
+const category = await yirifi.categories.create({
+  name: 'New Category',
+  description: 'Category description'
+});
+```
+
+```javascript Update Category
+const updatedCategory = await yirifi.categories.update('cat_123', {
+  name: 'Updated Name',
+  description: 'Updated description'
+});
+```
+
+```javascript Delete Category
+await yirifi.categories.delete('cat_123');
+```
+</CodeGroup>
+
+### Templates
+
+<CodeGroup>
+```javascript List Templates
+const templates = await yirifi.templates.list({
+  categoryId: 'cat_123',
+  page: 1,
+  limit: 20
+});
+```
+
+```javascript Create Template
+const template = await yirifi.templates.create({
+  name: 'Email Template',
+  categoryId: 'cat_123',
+  content: '<html>...</html>',
+  variables: ['name', 'email']
+});
+```
+</CodeGroup>
+
+### Components
+
+<CodeGroup>
+```javascript List Components
+const components = await yirifi.components.list();
+```
+
+```javascript Create Component
+const component = await yirifi.components.create({
+  name: 'Button Component',
+  type: 'ui',
+  properties: {
+    color: 'primary',
+    size: 'medium'
+  }
+});
+```
+</CodeGroup>
+
+## Error Handling
+
+The SDK provides comprehensive error handling with typed errors:
+
+```javascript
+import { 
+  YirifiAPIError, 
+  ValidationError, 
+  AuthenticationError,
+  RateLimitError,
+  NotFoundError 
+} from '@yirifi/api';
+
+try {
+  const category = await yirifi.categories.get('invalid-id');
+} catch (error) {
+  if (error instanceof NotFoundError) {
+    console.log('Category not found');
+  } else if (error instanceof ValidationError) {
+    console.log('Validation errors:', error.details);
+  } else if (error instanceof RateLimitError) {
+    console.log('Rate limited. Retry after:', error.retryAfter);
+    // Automatic retry is handled by default
+  } else if (error instanceof AuthenticationError) {
+    console.log('Check your API key');
+  } else {
+    console.log('Unknown error:', error.message);
+  }
+}
+```
+
+### Global Error Handler
+
+```javascript
+yirifi.onError((error) => {
+  // Log to your error tracking service
+  console.error('Yirifi API Error:', {
+    type: error.constructor.name,
+    message: error.message,
+    status: error.status,
+    requestId: error.requestId
+  });
+});
+```
+
+## TypeScript Support
+
+The SDK is built with TypeScript and provides full type safety:
+
+```typescript
+import { YirifiAPI, Category, Template, CreateCategoryRequest } from '@yirifi/api';
+
+const yirifi = new YirifiAPI({ apiKey: 'your-key' });
+
+// Fully typed responses
+const categories: Category[] = await yirifi.categories.list();
+
+// Type-safe request bodies
+const createRequest: CreateCategoryRequest = {
+  name: 'Tech Category',
+  description: 'Technology related content'
+};
+
+const newCategory: Category = await yirifi.categories.create(createRequest);
+```
+
+### Custom Types
+
+```typescript
+// Extend base types for your use case
+interface ExtendedCategory extends Category {
+  customField?: string;
+}
+
+// Type-safe configuration
+const config: YirifiAPIConfig = {
+  apiKey: process.env.YIRIFI_API_KEY!,
+  timeout: 30000,
+  retries: 3
+};
+```
+
+## Batch Operations
+
+Perform multiple operations efficiently:
+
+```javascript
+// Batch create categories
+const categories = await yirifi.categories.batchCreate([
+  { name: 'Category 1', description: 'First category' },
+  { name: 'Category 2', description: 'Second category' },
+  { name: 'Category 3', description: 'Third category' }
+]);
+
+// Batch get categories
+const categoryIds = ['cat_1', 'cat_2', 'cat_3'];
+const categories = await yirifi.categories.batchGet(categoryIds);
+
+// Batch update
+const updates = [
+  { id: 'cat_1', name: 'Updated Category 1' },
+  { id: 'cat_2', name: 'Updated Category 2' }
+];
+const updatedCategories = await yirifi.categories.batchUpdate(updates);
+```
+
+## Streaming (Server-Sent Events)
+
+For real-time updates:
+
+```javascript
+// Listen for category changes
+const categoryStream = yirifi.categories.stream({
+  events: ['created', 'updated', 'deleted']
+});
+
+categoryStream.on('created', (category) => {
+  console.log('New category created:', category);
+});
+
+categoryStream.on('updated', (category) => {
+  console.log('Category updated:', category);
+});
+
+categoryStream.on('deleted', (categoryId) => {
+  console.log('Category deleted:', categoryId);
+});
+
+categoryStream.on('error', (error) => {
+  console.error('Stream error:', error);
+});
+
+// Close the stream when done
+categoryStream.close();
+```
+
+## Pagination
+
+Handle paginated responses easily:
+
+```javascript
+// Manual pagination
+let page = 1;
+let allCategories = [];
+
+while (true) {
+  const response = await yirifi.categories.list({ page, limit: 100 });
+  allCategories.push(...response.items);
+  
+  if (!response.hasMore) break;
+  page++;
+}
+
+// Automatic pagination with async iterator
+const allCategories = [];
+for await (const category of yirifi.categories.iterateAll()) {
+  allCategories.push(category);
+}
+
+// Or collect all at once
+const allCategories = await yirifi.categories.collectAll();
+```
+
+## Browser Usage
+
+The SDK works in browser environments with some considerations:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <script type="module">
+    import { YirifiAPI } from 'https://cdn.skypack.dev/@yirifi/api';
+    
+    const yirifi = new YirifiAPI({
+      apiKey: 'your-public-key', // Use public/restricted keys only
+      
+      // Configure CORS if needed
+      corsMode: 'cors',
+      
+      // Browser-specific options
+      cache: 'no-cache',
+      credentials: 'same-origin'
+    });
+    
+    // Use the API
+    const categories = await yirifi.categories.list();
+    console.log(categories);
+  </script>
+</head>
+</html>
+```
+
+<Warning>
+**Security Note**: Never expose your secret API key in browser code. Use public or restricted API keys for client-side applications.
+</Warning>
+
+## React Integration
+
+Example React hook for using the Yirifi API:
+
+```jsx
+import { useState, useEffect } from 'react';
+import { YirifiAPI } from '@yirifi/api';
+
+const yirifi = new YirifiAPI({ apiKey: process.env.REACT_APP_YIRIFI_API_KEY });
+
+export function useCategories() {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const data = await yirifi.categories.list();
+        setCategories(data);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCategories();
+  }, []);
+
+  const createCategory = async (categoryData) => {
+    const newCategory = await yirifi.categories.create(categoryData);
+    setCategories(prev => [...prev, newCategory]);
+    return newCategory;
+  };
+
+  return { categories, loading, error, createCategory };
+}
+
+// Usage in component
+function CategoriesList() {
+  const { categories, loading, error, createCategory } = useCategories();
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <div>
+      {categories.map(category => (
+        <div key={category.id}>{category.name}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+## Testing
+
+Mock the SDK for testing:
+
+```javascript
+// __mocks__/@yirifi/api.js
+export const YirifiAPI = jest.fn().mockImplementation(() => ({
+  categories: {
+    list: jest.fn().mockResolvedValue([]),
+    get: jest.fn().mockResolvedValue({ id: '1', name: 'Test' }),
+    create: jest.fn().mockResolvedValue({ id: '1', name: 'Test' }),
+    update: jest.fn().mockResolvedValue({ id: '1', name: 'Updated' }),
+    delete: jest.fn().mockResolvedValue(undefined)
+  }
+}));
+
+// In your tests
+import { YirifiAPI } from '@yirifi/api';
+
+jest.mock('@yirifi/api');
+
+test('should fetch categories', async () => {
+  const mockList = YirifiAPI.mock.results[0].value.categories.list;
+  mockList.mockResolvedValue([{ id: '1', name: 'Test Category' }]);
+
+  // Test your code that uses the API
+  // ...
+});
+```
+
+## Migration Guide
+
+### From REST API to SDK
+
+<CodeGroup>
+```javascript Before (Raw Fetch)
+const response = await fetch('https://api.yirifi.ai/v1/category', {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+if (!response.ok) {
+  throw new Error(`HTTP error! status: ${response.status}`);
+}
+
+const categories = await response.json();
+```
+
+```javascript After (SDK)
+const categories = await yirifi.categories.list();
+// Error handling, rate limiting, retries all handled automatically
+```
+</CodeGroup>
+
+## Support
+
+- **Documentation**: [docs.yirifi.ai](https://docs.yirifi.ai)
+- **Issues**: [GitHub Issues](https://github.com/yirifi/sdk-javascript/issues)
+- **Support**: [support@yirifi.ai](mailto:support@yirifi.ai)
+- **Community**: [Discord](https://discord.gg/yirifi)

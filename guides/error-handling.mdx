@@ -1,0 +1,499 @@
+---
+title: "Error Handling"
+description: "Learn how to handle errors gracefully with comprehensive error codes and responses"
+---
+
+# Error Handling
+
+The Yirifi.ai API uses conventional HTTP response codes to indicate the success or failure of API requests. This guide will help you understand our error responses and implement robust error handling in your applications.
+
+## HTTP Status Codes
+
+Our API returns standard HTTP status codes:
+
+<CardGroup cols={2}>
+  <Card title="2xx Success" icon="check-circle" color="#10b981">
+    Request was successful
+  </Card>
+  
+  <Card title="4xx Client Errors" icon="exclamation-triangle" color="#f59e0b">
+    Error in the request (client-side)
+  </Card>
+  
+  <Card title="5xx Server Errors" icon="x-circle" color="#ef4444">
+    Error on our servers (server-side)
+  </Card>
+</CardGroup>
+
+## Error Response Format
+
+All error responses follow a consistent structure:
+
+<ResponseExample>
+```json Error Response Format
+{
+  "error": "Error Type",
+  "message": "Human-readable error message",
+  "code": "MACHINE_READABLE_CODE",
+  "details": {
+    "field": "specific_field",
+    "value": "invalid_value"
+  },
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456789"
+}
+```
+</ResponseExample>
+
+## Common Error Types
+
+### Authentication Errors (401)
+
+<ResponseExample>
+```json 401 Unauthorized - Missing API Key
+{
+  "error": "Unauthorized",
+  "message": "API key is required",
+  "code": "MISSING_API_KEY",
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456789"
+}
+```
+</ResponseExample>
+
+<ResponseExample>
+```json 401 Unauthorized - Invalid API Key
+{
+  "error": "Unauthorized", 
+  "message": "Invalid API key provided",
+  "code": "INVALID_API_KEY",
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456790"
+}
+```
+</ResponseExample>
+
+### Permission Errors (403)
+
+<ResponseExample>
+```json 403 Forbidden
+{
+  "error": "Forbidden",
+  "message": "API key does not have permission to access this resource",
+  "code": "INSUFFICIENT_PERMISSIONS",
+  "details": {
+    "resource": "/category",
+    "permission_required": "read:categories"
+  },
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456791"
+}
+```
+</ResponseExample>
+
+### Validation Errors (400)
+
+<ResponseExample>
+```json 400 Bad Request - Validation Error
+{
+  "error": "Validation Error",
+  "message": "Request validation failed",
+  "code": "VALIDATION_ERROR",
+  "details": {
+    "field": "name",
+    "message": "Name is required and must be at least 3 characters",
+    "value": "AB"
+  },
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456792"
+}
+```
+</ResponseExample>
+
+### Resource Errors (404)
+
+<ResponseExample>
+```json 404 Not Found
+{
+  "error": "Not Found",
+  "message": "The requested category was not found",
+  "code": "RESOURCE_NOT_FOUND",
+  "details": {
+    "resource": "category",
+    "id": "cat_nonexistent"
+  },
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456793"
+}
+```
+</ResponseExample>
+
+### Rate Limiting Errors (429)
+
+<ResponseExample>
+```json 429 Too Many Requests
+{
+  "error": "Rate Limit Exceeded",
+  "message": "You have exceeded the rate limit of 100 requests per minute",
+  "code": "RATE_LIMIT_EXCEEDED",
+  "details": {
+    "limit": 100,
+    "window": "minute",
+    "retryAfter": 30
+  },
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456794"
+}
+```
+</ResponseExample>
+
+### Server Errors (500)
+
+<ResponseExample>
+```json 500 Internal Server Error
+{
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred on our servers",
+  "code": "INTERNAL_ERROR",
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456795"
+}
+```
+</ResponseExample>
+
+## Error Handling Implementation
+
+### JavaScript/Node.js
+
+<CodeGroup>
+```javascript Basic Error Handling
+async function handleAPIRequest(url, options) {
+  try {
+    const response = await fetch(url, options);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new APIError(response.status, errorData);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    if (error instanceof APIError) {
+      console.error(`API Error: ${error.message}`);
+      // Handle specific error codes
+      switch (error.code) {
+        case 'INVALID_API_KEY':
+          // Redirect to authentication
+          break;
+        case 'RATE_LIMIT_EXCEEDED':
+          // Implement retry logic
+          break;
+        case 'VALIDATION_ERROR':
+          // Show validation errors to user
+          break;
+        default:
+          // Handle other errors
+      }
+    } else {
+      console.error('Network or other error:', error);
+    }
+  }
+}
+
+class APIError extends Error {
+  constructor(status, errorData) {
+    super(errorData.message);
+    this.status = status;
+    this.code = errorData.code;
+    this.details = errorData.details;
+    this.requestId = errorData.requestId;
+  }
+}
+```
+
+```javascript Advanced Error Handling
+class YirifiAPI {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.baseURL = 'https://api.yirifi.ai/v1';
+  }
+
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    const requestOptions = {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    };
+
+    try {
+      const response = await fetch(url, requestOptions);
+      
+      if (!response.ok) {
+        await this.handleError(response);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      if (error instanceof YirifiAPIError) {
+        throw error;
+      }
+      throw new YirifiAPIError(0, {
+        error: 'Network Error',
+        message: 'Failed to connect to Yirifi API',
+        code: 'NETWORK_ERROR'
+      });
+    }
+  }
+
+  async handleError(response) {
+    const errorData = await response.json();
+    
+    switch (response.status) {
+      case 401:
+        throw new YirifiAPIError(401, errorData);
+      case 403:
+        throw new YirifiAPIError(403, errorData);
+      case 404:
+        throw new YirifiAPIError(404, errorData);
+      case 429:
+        // Implement retry logic here
+        throw new YirifiAPIError(429, errorData);
+      case 500:
+        throw new YirifiAPIError(500, errorData);
+      default:
+        throw new YirifiAPIError(response.status, errorData);
+    }
+  }
+}
+
+class YirifiAPIError extends Error {
+  constructor(status, errorData) {
+    super(errorData.message);
+    this.name = 'YirifiAPIError';
+    this.status = status;
+    this.code = errorData.code;
+    this.details = errorData.details;
+    this.requestId = errorData.requestId;
+  }
+}
+```
+</CodeGroup>
+
+### Python
+
+<CodeGroup>
+```python Basic Error Handling
+import requests
+from typing import Optional, Dict, Any
+
+class YirifiAPIError(Exception):
+    def __init__(self, status_code: int, error_data: Dict[str, Any]):
+        self.status_code = status_code
+        self.error = error_data.get('error')
+        self.message = error_data.get('message')
+        self.code = error_data.get('code')
+        self.details = error_data.get('details')
+        self.request_id = error_data.get('requestId')
+        super().__init__(self.message)
+
+def make_api_request(url: str, headers: Dict[str, str], **kwargs) -> Optional[Dict]:
+    try:
+        response = requests.request(url=url, headers=headers, **kwargs)
+        
+        if not response.ok:
+            error_data = response.json()
+            raise YirifiAPIError(response.status_code, error_data)
+        
+        return response.json()
+        
+    except YirifiAPIError:
+        raise
+    except requests.RequestException as e:
+        raise YirifiAPIError(0, {
+            'error': 'Network Error',
+            'message': f'Failed to connect to API: {str(e)}',
+            'code': 'NETWORK_ERROR'
+        })
+
+# Usage
+try:
+    headers = {'Authorization': 'Bearer YOUR_API_KEY'}
+    data = make_api_request('https://api.yirifi.ai/v1/category', headers, method='GET')
+    print(data)
+except YirifiAPIError as e:
+    print(f"API Error ({e.status_code}): {e.message}")
+    print(f"Error Code: {e.code}")
+    if e.details:
+        print(f"Details: {e.details}")
+```
+
+```python Advanced Error Handling with Retry
+import time
+import requests
+from typing import Optional, Dict, Any, Union
+from functools import wraps
+
+class YirifiAPI:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = 'https://api.yirifi.ai/v1'
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        })
+
+    def _handle_response(self, response: requests.Response) -> Dict[str, Any]:
+        if response.ok:
+            return response.json()
+        
+        try:
+            error_data = response.json()
+        except ValueError:
+            error_data = {
+                'error': 'Unknown Error',
+                'message': f'HTTP {response.status_code}',
+                'code': f'HTTP_{response.status_code}'
+            }
+        
+        if response.status_code == 429:
+            # Handle rate limiting with retry
+            retry_after = int(response.headers.get('Retry-After', 60))
+            raise RateLimitError(retry_after, error_data)
+        
+        raise YirifiAPIError(response.status_code, error_data)
+
+    def request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+        url = f'{self.base_url}{endpoint}'
+        response = self.session.request(method, url, **kwargs)
+        return self._handle_response(response)
+
+    def get(self, endpoint: str, **kwargs) -> Dict[str, Any]:
+        return self.request('GET', endpoint, **kwargs)
+
+    def post(self, endpoint: str, **kwargs) -> Dict[str, Any]:
+        return self.request('POST', endpoint, **kwargs)
+
+class RateLimitError(YirifiAPIError):
+    def __init__(self, retry_after: int, error_data: Dict[str, Any]):
+        super().__init__(429, error_data)
+        self.retry_after = retry_after
+
+def with_retry(max_retries: int = 3, backoff_factor: float = 1.0):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except RateLimitError as e:
+                    if attempt == max_retries:
+                        raise
+                    time.sleep(e.retry_after)
+                except YirifiAPIError as e:
+                    if attempt == max_retries or e.status_code < 500:
+                        raise
+                    time.sleep(backoff_factor * (2 ** attempt))
+        return wrapper
+    return decorator
+
+# Usage with retry
+@with_retry(max_retries=3)
+def get_categories():
+    api = YirifiAPI('YOUR_API_KEY')
+    return api.get('/category')
+```
+</CodeGroup>
+
+## Error Code Reference
+
+| Code | Description | Recommended Action |
+|------|-------------|-------------------|
+| `MISSING_API_KEY` | No API key provided | Include Authorization header |
+| `INVALID_API_KEY` | API key is invalid | Check your API key |
+| `INSUFFICIENT_PERMISSIONS` | API key lacks permissions | Check your plan or permissions |
+| `VALIDATION_ERROR` | Request data is invalid | Check required fields and formats |
+| `RESOURCE_NOT_FOUND` | Requested resource doesn't exist | Verify resource ID |
+| `RATE_LIMIT_EXCEEDED` | Too many requests | Implement backoff and retry |
+| `INTERNAL_ERROR` | Server error | Retry after delay, contact support if persistent |
+| `NETWORK_ERROR` | Connection failed | Check network connectivity |
+
+## Best Practices
+
+### 1. Always Check Response Status
+
+<Tip>
+Never assume API calls will succeed. Always check the response status and handle errors appropriately.
+</Tip>
+
+### 2. Implement Exponential Backoff
+
+For rate limiting and server errors, implement exponential backoff:
+
+```javascript
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function requestWithRetry(fn, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (error.status === 429 || error.status >= 500) {
+        const delay = Math.min(1000 * Math.pow(2, i), 30000);
+        await sleep(delay);
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+```
+
+### 3. Log Error Details
+
+Always log error details for debugging:
+
+```javascript
+console.error('API Error:', {
+  status: error.status,
+  code: error.code,
+  message: error.message,
+  requestId: error.requestId,
+  timestamp: new Date().toISOString()
+});
+```
+
+### 4. Provide User-Friendly Messages
+
+Transform technical errors into user-friendly messages:
+
+```javascript
+function getUserFriendlyMessage(error) {
+  switch (error.code) {
+    case 'INVALID_API_KEY':
+      return 'Authentication failed. Please check your API configuration.';
+    case 'VALIDATION_ERROR':
+      return `Invalid input: ${error.details?.message || error.message}`;
+    case 'RATE_LIMIT_EXCEEDED':
+      return 'Too many requests. Please wait a moment and try again.';
+    case 'RESOURCE_NOT_FOUND':
+      return 'The requested item was not found.';
+    default:
+      return 'An unexpected error occurred. Please try again later.';
+  }
+}
+```
+
+## Getting Help
+
+If you encounter persistent errors or need assistance:
+
+- Check the error's `requestId` and include it when contacting support
+- Review our [API status page](https://status.yirifi.ai) for known issues
+- Email support: [support@yirifi.ai](mailto:support@yirifi.ai)
+- Join our community: [Discord](https://discord.gg/yirifi)

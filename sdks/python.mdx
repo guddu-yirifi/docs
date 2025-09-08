@@ -1,0 +1,755 @@
+---
+title: "Python SDK"
+description: "Pythonic interface for all Yirifi.ai APIs with async support"
+---
+
+# Python SDK
+
+The Yirifi.ai Python SDK provides a Pythonic, type-safe interface for all Yirifi.ai APIs with both synchronous and asynchronous support.
+
+## Installation
+
+<CodeGroup>
+```bash pip
+pip install yirifi-python
+```
+
+```bash Poetry
+poetry add yirifi-python
+```
+
+```bash conda
+conda install -c conda-forge yirifi-python
+```
+</CodeGroup>
+
+## Quick Start
+
+### Synchronous Usage
+
+```python
+from yirifi import YirifiAPI
+
+# Initialize the client
+client = YirifiAPI(api_key="your-api-key")
+
+# Get all categories
+categories = client.categories.list()
+print(categories)
+
+# Create a new category
+new_category = client.categories.create(
+    name="Technology",
+    description="Tech-related content"
+)
+print(f"Created category: {new_category.id}")
+```
+
+### Asynchronous Usage
+
+```python
+import asyncio
+from yirifi import AsyncYirifiAPI
+
+async def main():
+    # Initialize async client
+    async with AsyncYirifiAPI(api_key="your-api-key") as client:
+        # Get all categories
+        categories = await client.categories.list()
+        print(categories)
+        
+        # Create a new category
+        new_category = await client.categories.create(
+            name="Technology",
+            description="Tech-related content"
+        )
+        print(f"Created category: {new_category.id}")
+
+# Run async function
+asyncio.run(main())
+```
+
+## Configuration
+
+### Basic Configuration
+
+```python
+from yirifi import YirifiAPI
+
+client = YirifiAPI(
+    api_key="your-api-key",
+    base_url="https://api.yirifi.ai/v1",  # Optional
+    timeout=30.0,  # seconds, default: 60.0
+    max_retries=3,  # default: 3
+    rate_limit_strategy="backoff"  # "backoff" | "raise" | "ignore"
+)
+```
+
+### Advanced Configuration
+
+```python
+from yirifi import YirifiAPI
+import httpx
+import logging
+
+# Custom HTTP client
+custom_client = httpx.Client(
+    timeout=httpx.Timeout(30.0),
+    limits=httpx.Limits(max_connections=10)
+)
+
+client = YirifiAPI(
+    api_key=os.environ["YIRIFI_API_KEY"],
+    http_client=custom_client,
+    
+    # Logging configuration
+    logger=logging.getLogger("yirifi"),
+    
+    # Request/response hooks
+    before_request=lambda req: print(f"Making request to {req.url}"),
+    after_response=lambda resp: print(f"Received {resp.status_code}"),
+    
+    # Error handling
+    on_error=lambda error: logging.error(f"API Error: {error}"),
+    
+    # Rate limiting
+    rate_limiting=RateLimitConfig(
+        strategy="backoff",
+        max_retries=5,
+        backoff_factor=2.0,
+        max_backoff=60.0
+    )
+)
+```
+
+## API Reference
+
+### Categories
+
+<CodeGroup>
+```python List Categories
+from yirifi.types import CategoryListParams
+
+# Basic list
+categories = client.categories.list()
+
+# With parameters
+categories = client.categories.list(
+    page=1,
+    limit=50,
+    search="technology"
+)
+
+# Using typed parameters
+params = CategoryListParams(
+    page=1,
+    limit=50,
+    search="technology"
+)
+categories = client.categories.list(**params.dict())
+```
+
+```python Get Category
+category = client.categories.get("cat_123")
+print(f"Category: {category.name}")
+```
+
+```python Create Category
+from yirifi.types import CreateCategoryRequest
+
+# Direct creation
+category = client.categories.create(
+    name="New Category",
+    description="Category description"
+)
+
+# Using typed request
+request = CreateCategoryRequest(
+    name="New Category",
+    description="Category description"
+)
+category = client.categories.create(**request.dict())
+```
+
+```python Update Category
+updated_category = client.categories.update(
+    "cat_123",
+    name="Updated Name",
+    description="Updated description"
+)
+```
+
+```python Delete Category
+client.categories.delete("cat_123")
+```
+</CodeGroup>
+
+### Templates
+
+<CodeGroup>
+```python List Templates
+templates = client.templates.list(
+    category_id="cat_123",
+    page=1,
+    limit=20
+)
+```
+
+```python Create Template
+template = client.templates.create(
+    name="Email Template",
+    category_id="cat_123",
+    content="<html>...</html>",
+    variables=["name", "email"]
+)
+```
+</CodeGroup>
+
+### Components
+
+<CodeGroup>
+```python List Components
+components = client.components.list()
+```
+
+```python Create Component
+component = client.components.create(
+    name="Button Component",
+    type="ui",
+    properties={
+        "color": "primary",
+        "size": "medium"
+    }
+)
+```
+</CodeGroup>
+
+## Error Handling
+
+The SDK provides comprehensive error handling with typed exceptions:
+
+```python
+from yirifi.exceptions import (
+    YirifiAPIError,
+    ValidationError,
+    AuthenticationError,
+    RateLimitError,
+    NotFoundError,
+    ServerError
+)
+
+try:
+    category = client.categories.get("invalid-id")
+except NotFoundError:
+    print("Category not found")
+except ValidationError as e:
+    print(f"Validation errors: {e.details}")
+except RateLimitError as e:
+    print(f"Rate limited. Retry after: {e.retry_after} seconds")
+    # Automatic retry is handled by default
+except AuthenticationError:
+    print("Check your API key")
+except ServerError as e:
+    print(f"Server error: {e.status_code}")
+except YirifiAPIError as e:
+    print(f"API error: {e.message}")
+```
+
+### Global Error Handler
+
+```python
+def handle_api_error(error: YirifiAPIError) -> None:
+    """Global error handler for all API calls"""
+    logger.error(
+        "Yirifi API Error",
+        extra={
+            "error_type": type(error).__name__,
+            "message": error.message,
+            "status_code": getattr(error, "status_code", None),
+            "request_id": getattr(error, "request_id", None)
+        }
+    )
+
+# Configure global error handler
+client = YirifiAPI(
+    api_key="your-key",
+    on_error=handle_api_error
+)
+```
+
+## Type Safety
+
+The SDK is fully typed with Pydantic models:
+
+```python
+from yirifi.types import Category, Template, CreateCategoryRequest
+from typing import List
+
+# Fully typed responses
+categories: List[Category] = client.categories.list()
+
+# Type-safe request bodies
+create_request = CreateCategoryRequest(
+    name="Tech Category",
+    description="Technology related content"
+)
+
+new_category: Category = client.categories.create(**create_request.dict())
+
+# Access typed fields
+print(f"Category ID: {new_category.id}")
+print(f"Created at: {new_category.created_at}")
+```
+
+### Custom Models
+
+```python
+from pydantic import BaseModel
+from yirifi.types import Category
+
+class ExtendedCategory(Category):
+    """Extended category with custom fields"""
+    custom_field: str = None
+    
+    class Config:
+        extra = "allow"  # Allow additional fields
+
+# Use custom model
+def process_category(category_data: dict) -> ExtendedCategory:
+    return ExtendedCategory(**category_data)
+```
+
+## Async Support
+
+Full async/await support with context managers:
+
+```python
+import asyncio
+from yirifi import AsyncYirifiAPI
+
+async def bulk_create_categories():
+    async with AsyncYirifiAPI(api_key="your-key") as client:
+        # Create multiple categories concurrently
+        tasks = [
+            client.categories.create(
+                name=f"Category {i}",
+                description=f"Description {i}"
+            )
+            for i in range(10)
+        ]
+        
+        categories = await asyncio.gather(*tasks)
+        print(f"Created {len(categories)} categories")
+
+# Run async function
+asyncio.run(bulk_create_categories())
+```
+
+### Async Streaming
+
+```python
+async def stream_category_updates():
+    async with AsyncYirifiAPI(api_key="your-key") as client:
+        async for event in client.categories.stream_events():
+            match event.type:
+                case "created":
+                    print(f"New category: {event.data.name}")
+                case "updated":
+                    print(f"Updated category: {event.data.name}")
+                case "deleted":
+                    print(f"Deleted category: {event.data.id}")
+```
+
+## Batch Operations
+
+Efficient batch operations for bulk data processing:
+
+```python
+# Batch create
+categories_data = [
+    {"name": "Category 1", "description": "First category"},
+    {"name": "Category 2", "description": "Second category"},
+    {"name": "Category 3", "description": "Third category"}
+]
+
+categories = client.categories.batch_create(categories_data)
+print(f"Created {len(categories)} categories")
+
+# Batch get
+category_ids = ["cat_1", "cat_2", "cat_3"]
+categories = client.categories.batch_get(category_ids)
+
+# Batch update
+updates = [
+    {"id": "cat_1", "name": "Updated Category 1"},
+    {"id": "cat_2", "name": "Updated Category 2"}
+]
+updated_categories = client.categories.batch_update(updates)
+```
+
+## Pagination
+
+Handle paginated responses with ease:
+
+```python
+from yirifi.pagination import paginate
+
+# Manual pagination
+page = 1
+all_categories = []
+
+while True:
+    response = client.categories.list(page=page, limit=100)
+    all_categories.extend(response.items)
+    
+    if not response.has_more:
+        break
+    page += 1
+
+# Automatic pagination with iterator
+all_categories = []
+for category in client.categories.iterate_all():
+    all_categories.append(category)
+
+# Or collect all at once
+all_categories = client.categories.collect_all()
+
+# Async pagination
+async def get_all_async():
+    all_categories = []
+    async for category in client.categories.iterate_all_async():
+        all_categories.append(category)
+    return all_categories
+```
+
+## Django Integration
+
+Easy integration with Django applications:
+
+```python
+# settings.py
+YIRIFI_API_KEY = os.environ.get('YIRIFI_API_KEY')
+
+# utils.py
+from django.conf import settings
+from yirifi import YirifiAPI
+
+def get_yirifi_client():
+    """Get configured Yirifi client instance"""
+    return YirifiAPI(api_key=settings.YIRIFI_API_KEY)
+
+# models.py
+from django.db import models
+from .utils import get_yirifi_client
+
+class Category(models.Model):
+    name = models.CharField(max_length=255)
+    yirifi_id = models.CharField(max_length=50, blank=True)
+    
+    def sync_to_yirifi(self):
+        """Sync category to Yirifi.ai"""
+        client = get_yirifi_client()
+        
+        if self.yirifi_id:
+            # Update existing
+            client.categories.update(
+                self.yirifi_id,
+                name=self.name
+            )
+        else:
+            # Create new
+            yirifi_category = client.categories.create(name=self.name)
+            self.yirifi_id = yirifi_category.id
+            self.save()
+
+# views.py
+from django.http import JsonResponse
+from .utils import get_yirifi_client
+
+def categories_view(request):
+    client = get_yirifi_client()
+    categories = client.categories.list()
+    
+    return JsonResponse({
+        'categories': [
+            {'id': cat.id, 'name': cat.name}
+            for cat in categories
+        ]
+    })
+```
+
+## Flask Integration
+
+Integration with Flask applications:
+
+```python
+from flask import Flask, jsonify, request
+from yirifi import YirifiAPI
+import os
+
+app = Flask(__name__)
+
+# Initialize Yirifi client
+yirifi = YirifiAPI(api_key=os.environ['YIRIFI_API_KEY'])
+
+@app.route('/api/categories', methods=['GET'])
+def get_categories():
+    try:
+        categories = yirifi.categories.list()
+        return jsonify([
+            {'id': cat.id, 'name': cat.name, 'description': cat.description}
+            for cat in categories
+        ])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/categories', methods=['POST'])
+def create_category():
+    try:
+        data = request.get_json()
+        category = yirifi.categories.create(**data)
+        return jsonify({
+            'id': category.id,
+            'name': category.name,
+            'description': category.description
+        }), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+## Testing
+
+Mock the SDK for testing:
+
+```python
+# conftest.py
+import pytest
+from unittest.mock import Mock
+from yirifi import YirifiAPI
+
+@pytest.fixture
+def mock_yirifi():
+    """Mock Yirifi API client for testing"""
+    client = Mock(spec=YirifiAPI)
+    
+    # Mock categories
+    client.categories.list.return_value = [
+        Mock(id="cat_1", name="Test Category 1"),
+        Mock(id="cat_2", name="Test Category 2")
+    ]
+    
+    client.categories.get.return_value = Mock(
+        id="cat_1", 
+        name="Test Category",
+        description="Test description"
+    )
+    
+    client.categories.create.return_value = Mock(
+        id="cat_new",
+        name="New Category",
+        description="New description"
+    )
+    
+    return client
+
+# test_api.py
+def test_get_categories(mock_yirifi):
+    """Test getting categories"""
+    categories = mock_yirifi.categories.list()
+    
+    assert len(categories) == 2
+    assert categories[0].name == "Test Category 1"
+    mock_yirifi.categories.list.assert_called_once()
+
+def test_create_category(mock_yirifi):
+    """Test creating a category"""
+    category_data = {
+        "name": "New Category",
+        "description": "New description"
+    }
+    
+    result = mock_yirifi.categories.create(**category_data)
+    
+    assert result.id == "cat_new"
+    assert result.name == "New Category"
+    mock_yirifi.categories.create.assert_called_once_with(**category_data)
+```
+
+### Using pytest-asyncio for async tests
+
+```python
+import pytest
+from unittest.mock import AsyncMock
+from yirifi import AsyncYirifiAPI
+
+@pytest.fixture
+async def async_mock_yirifi():
+    """Mock async Yirifi API client"""
+    client = AsyncMock(spec=AsyncYirifiAPI)
+    
+    client.categories.list.return_value = [
+        Mock(id="cat_1", name="Test Category 1")
+    ]
+    
+    return client
+
+@pytest.mark.asyncio
+async def test_async_get_categories(async_mock_yirifi):
+    """Test async getting categories"""
+    categories = await async_mock_yirifi.categories.list()
+    
+    assert len(categories) == 1
+    assert categories[0].name == "Test Category 1"
+```
+
+## Logging and Debugging
+
+Configure logging for debugging:
+
+```python
+import logging
+from yirifi import YirifiAPI
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Enable SDK logging
+logger = logging.getLogger("yirifi")
+logger.setLevel(logging.DEBUG)
+
+# Create client with debug logging
+client = YirifiAPI(
+    api_key="your-key",
+    logger=logger,
+    debug=True  # Enable debug mode
+)
+
+# All API calls will now be logged
+categories = client.categories.list()
+```
+
+## Performance Tips
+
+### Connection Pooling
+
+```python
+import httpx
+from yirifi import YirifiAPI
+
+# Use connection pooling for better performance
+http_client = httpx.Client(
+    limits=httpx.Limits(
+        max_keepalive_connections=10,
+        max_connections=20
+    ),
+    timeout=httpx.Timeout(30.0)
+)
+
+client = YirifiAPI(
+    api_key="your-key",
+    http_client=http_client
+)
+
+# Remember to close the client when done
+client.close()
+
+# Or use context manager
+with YirifiAPI(api_key="your-key", http_client=http_client) as client:
+    categories = client.categories.list()
+```
+
+### Caching
+
+```python
+from functools import lru_cache
+from yirifi import YirifiAPI
+
+client = YirifiAPI(api_key="your-key")
+
+@lru_cache(maxsize=128)
+def get_category_cached(category_id: str):
+    """Get category with caching"""
+    return client.categories.get(category_id)
+
+# Or use a more sophisticated cache like Redis
+import redis
+import json
+from typing import Optional
+
+class CategoryCache:
+    def __init__(self, redis_client: redis.Redis, ttl: int = 300):
+        self.redis = redis_client
+        self.ttl = ttl
+        
+    def get(self, category_id: str) -> Optional[dict]:
+        cached = self.redis.get(f"category:{category_id}")
+        return json.loads(cached) if cached else None
+    
+    def set(self, category_id: str, category_data: dict) -> None:
+        self.redis.setex(
+            f"category:{category_id}",
+            self.ttl,
+            json.dumps(category_data)
+        )
+
+cache = CategoryCache(redis.Redis())
+
+def get_category_with_cache(category_id: str):
+    # Try cache first
+    cached = cache.get(category_id)
+    if cached:
+        return cached
+    
+    # Fetch from API
+    category = client.categories.get(category_id)
+    cache.set(category_id, category.dict())
+    
+    return category
+```
+
+## Migration Guide
+
+### From requests to SDK
+
+<CodeGroup>
+```python Before (requests)
+import requests
+
+headers = {
+    'Authorization': f'Bearer {api_key}',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get(
+    'https://api.yirifi.ai/v1/category',
+    headers=headers
+)
+
+if response.status_code != 200:
+    raise Exception(f"API error: {response.status_code}")
+
+categories = response.json()
+```
+
+```python After (SDK)
+from yirifi import YirifiAPI
+
+client = YirifiAPI(api_key=api_key)
+categories = client.categories.list()
+# Error handling, retries, rate limiting all handled automatically
+```
+</CodeGroup>
+
+## Support
+
+- **Documentation**: [docs.yirifi.ai](https://docs.yirifi.ai)
+- **PyPI Package**: [pypi.org/project/yirifi-python](https://pypi.org/project/yirifi-python)
+- **Issues**: [GitHub Issues](https://github.com/yirifi/sdk-python/issues)
+- **Support**: [support@yirifi.ai](mailto:support@yirifi.ai)
+- **Community**: [Discord](https://discord.gg/yirifi)

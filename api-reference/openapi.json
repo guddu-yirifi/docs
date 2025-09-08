@@ -1,45 +1,162 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "Your External API",
+    "title": "Yirifi.ai API",
     "version": "1.0.0",
-    "description": "External API for managing categories, components, templates, and more"
+    "description": "The Yirifi.ai API provides powerful endpoints for content management, knowledge base operations, and intelligent information services. Build applications that leverage AI-driven content organization, search, and retrieval capabilities.",
+    "termsOfService": "https://yirifi.ai/terms",
+    "contact": {
+      "name": "Yirifi.ai Support",
+      "email": "support@yirifi.ai",
+      "url": "https://yirifi.ai/support"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
   },
   "servers": [
     {
-      "url": "https://your-api-domain.com/api/external"
+      "url": "https://api.yirifi.ai/v1",
+      "description": "Production server"
+    },
+    {
+      "url": "https://api-staging.yirifi.ai/v1", 
+      "description": "Staging server"
     }
   ],
   "paths": {
     "/category": {
       "get": {
-        "summary": "Get all categories",
-        "tags": ["Category"],
+        "summary": "List all categories",
+        "description": "Retrieve a paginated list of all categories with optional filtering and sorting capabilities.",
+        "tags": ["Content Management"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for pagination (starts at 1)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query", 
+            "description": "Number of items per page (max 100)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term to filter categories by name or description",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Field to sort by",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["name", "createdAt", "updatedAt"],
+              "default": "createdAt"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "description": "Sort order",
+            "required": false,
+            "schema": {
+              "type": "string", 
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "List of categories",
+            "description": "List of categories retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Category"
+                  "$ref": "#/components/schemas/CategoryListResponse"
+                },
+                "examples": {
+                  "default": {
+                    "summary": "Example category list response",
+                    "value": {
+                      "items": [
+                        {
+                          "id": "cat_123",
+                          "name": "Technology",
+                          "description": "Technology-related content and resources",
+                          "createdAt": "2024-01-15T10:30:00Z",
+                          "updatedAt": "2024-01-15T10:30:00Z"
+                        }
+                      ],
+                      "pagination": {
+                        "page": 1,
+                        "limit": 20,
+                        "total": 1,
+                        "pages": 1,
+                        "hasMore": false
+                      }
+                    }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
           }
         }
       },
       "post": {
         "summary": "Create a new category",
-        "tags": ["Category"],
+        "description": "Create a new category for organizing content. Category names must be unique and between 3-100 characters.",
+        "tags": ["Content Management"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CategoryInput"
+              },
+              "examples": {
+                "basic": {
+                  "summary": "Basic category creation",
+                  "value": {
+                    "name": "Technology",
+                    "description": "Technology-related content and resources"
+                  }
+                },
+                "minimal": {
+                  "summary": "Minimal category (name only)",
+                  "value": {
+                    "name": "Business"
+                  }
+                }
               }
             }
           }
@@ -51,6 +168,151 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Category"
+                },
+                "examples": {
+                  "created": {
+                    "summary": "Successfully created category",
+                    "value": {
+                      "id": "cat_125",
+                      "name": "Technology",
+                      "description": "Technology-related content and resources",
+                      "createdAt": "2024-01-17T09:15:00Z",
+                      "updatedAt": "2024-01-17T09:15:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/category/{id}": {
+      "get": {
+        "summary": "Get a specific category",
+        "description": "Retrieve details of a specific category by its ID.",
+        "tags": ["Content Management"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category ID",
+            "schema": {
+              "type": "string",
+              "pattern": "^cat_[a-zA-Z0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a category",
+        "description": "Update an existing category's name and/or description.",
+        "tags": ["Content Management"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a category",
+        "description": "Permanently delete a category. This action cannot be undone.",
+        "tags": ["Content Management"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The category ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Category deleted successfully"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Cannot delete category with associated content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -58,13 +320,95 @@
         }
       }
     },
-    "/component": {
+    "/template": {
       "get": {
-        "summary": "Get all components",
-        "tags": ["Component"],
+        "summary": "List all templates",
+        "description": "Retrieve a paginated list of templates with optional filtering by category.",
+        "tags": ["Content Management"],
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "description": "Filter templates by category ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for pagination",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of items per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "List of components"
+            "description": "List of templates retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/component": {
+      "get": {
+        "summary": "List all components",
+        "description": "Retrieve a list of all available components for building dynamic content.",
+        "tags": ["Advanced Features"],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Filter components by type",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["ui", "data", "layout", "widget"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of components retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Component"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       }
@@ -74,22 +418,38 @@
     "schemas": {
       "Category": {
         "type": "object",
+        "required": ["id", "name", "createdAt", "updatedAt"],
         "properties": {
           "id": {
             "type": "string",
-            "description": "Unique identifier"
+            "description": "Unique category identifier",
+            "pattern": "^cat_[a-zA-Z0-9]+$",
+            "example": "cat_123abc"
           },
           "name": {
             "type": "string",
-            "description": "Category name"
+            "description": "Category name",
+            "minLength": 3,
+            "maxLength": 100,
+            "example": "Technology"
           },
           "description": {
             "type": "string",
-            "description": "Category description"
+            "description": "Category description",
+            "maxLength": 500,
+            "example": "Technology-related content and resources"
           },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Timestamp when the category was created",
+            "example": "2024-01-15T10:30:00Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the category was last updated",
+            "example": "2024-01-15T10:30:00Z"
           }
         }
       },
@@ -99,11 +459,359 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Category name"
+            "description": "Category name (must be unique)",
+            "minLength": 3,
+            "maxLength": 100,
+            "example": "Technology"
           },
           "description": {
             "type": "string",
-            "description": "Category description"
+            "description": "Optional category description",
+            "maxLength": 500,
+            "example": "Technology-related content and resources"
+          }
+        }
+      },
+      "CategoryListResponse": {
+        "type": "object",
+        "required": ["items", "pagination"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "Array of categories",
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "Template": {
+        "type": "object",
+        "required": ["id", "name", "categoryId", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique template identifier",
+            "pattern": "^tpl_[a-zA-Z0-9]+$",
+            "example": "tpl_456def"
+          },
+          "name": {
+            "type": "string",
+            "description": "Template name",
+            "example": "Email Newsletter Template"
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Associated category ID",
+            "example": "cat_123abc"
+          },
+          "content": {
+            "type": "string",
+            "description": "Template content with variables",
+            "example": "<html><body>Hello {{name}}!</body></html>"
+          },
+          "variables": {
+            "type": "array",
+            "description": "List of template variables",
+            "items": {
+              "type": "string"
+            },
+            "example": ["name", "email", "company"]
+          },
+          "type": {
+            "type": "string",
+            "description": "Template type",
+            "enum": ["email", "document", "webpage", "report"],
+            "example": "email"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-15T10:30:00Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-15T10:30:00Z"
+          }
+        }
+      },
+      "TemplateListResponse": {
+        "type": "object",
+        "required": ["items", "pagination"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Template"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "Component": {
+        "type": "object",
+        "required": ["id", "name", "type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique component identifier",
+            "pattern": "^cmp_[a-zA-Z0-9]+$",
+            "example": "cmp_789ghi"
+          },
+          "name": {
+            "type": "string",
+            "description": "Component name",
+            "example": "Button Component"
+          },
+          "type": {
+            "type": "string",
+            "description": "Component type",
+            "enum": ["ui", "data", "layout", "widget"],
+            "example": "ui"
+          },
+          "properties": {
+            "type": "object",
+            "description": "Component properties",
+            "additionalProperties": true,
+            "example": {
+              "color": "primary",
+              "size": "medium",
+              "variant": "solid"
+            }
+          },
+          "schema": {
+            "type": "object",
+            "description": "JSON schema for component properties",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-15T10:30:00Z"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "required": ["page", "limit", "total", "pages", "hasMore"],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Current page number",
+            "minimum": 1,
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Items per page",
+            "minimum": 1,
+            "maximum": 100,
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of items",
+            "minimum": 0,
+            "example": 150
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "minimum": 1,
+            "example": 8
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether there are more pages available",
+            "example": true
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error", "message", "code", "timestamp", "requestId"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error type",
+            "example": "Validation Error"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message",
+            "example": "Request validation failed"
+          },
+          "code": {
+            "type": "string",
+            "description": "Machine-readable error code",
+            "example": "VALIDATION_ERROR"
+          },
+          "details": {
+            "type": "object",
+            "description": "Additional error details",
+            "additionalProperties": true,
+            "example": {
+              "field": "name",
+              "message": "Name is required and must be at least 3 characters",
+              "value": "AB"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Error timestamp",
+            "example": "2024-01-17T10:30:00Z"
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Unique request identifier for debugging",
+            "example": "req_123456789"
+          }
+        }
+      }
+    },
+    "responses": {
+      "ValidationError": {
+        "description": "Request validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "validation": {
+                "summary": "Validation error example",
+                "value": {
+                  "error": "Validation Error",
+                  "message": "Request validation failed",
+                  "code": "VALIDATION_ERROR",
+                  "details": {
+                    "field": "name",
+                    "message": "Name is required and must be at least 3 characters",
+                    "value": "AB"
+                  },
+                  "timestamp": "2024-01-17T10:30:00Z",
+                  "requestId": "req_123456789"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication required or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "missing_key": {
+                "summary": "Missing API key",
+                "value": {
+                  "error": "Unauthorized",
+                  "message": "API key is required",
+                  "code": "MISSING_API_KEY",
+                  "timestamp": "2024-01-17T10:30:00Z",
+                  "requestId": "req_123456790"
+                }
+              },
+              "invalid_key": {
+                "summary": "Invalid API key", 
+                "value": {
+                  "error": "Unauthorized",
+                  "message": "Invalid API key provided",
+                  "code": "INVALID_API_KEY",
+                  "timestamp": "2024-01-17T10:30:00Z",
+                  "requestId": "req_123456791"
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "category_not_found": {
+                "summary": "Category not found",
+                "value": {
+                  "error": "Not Found",
+                  "message": "The requested category was not found",
+                  "code": "RESOURCE_NOT_FOUND",
+                  "details": {
+                    "resource": "category",
+                    "id": "cat_nonexistent"
+                  },
+                  "timestamp": "2024-01-17T10:30:00Z",
+                  "requestId": "req_123456792"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Resource conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "duplicate_name": {
+                "summary": "Category name already exists",
+                "value": {
+                  "error": "Conflict",
+                  "message": "A category with this name already exists",
+                  "code": "DUPLICATE_RESOURCE",
+                  "details": {
+                    "field": "name",
+                    "value": "Technology"
+                  },
+                  "timestamp": "2024-01-17T10:30:00Z",
+                  "requestId": "req_123456793"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RateLimitExceeded": {
+        "description": "Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "rate_limit": {
+                "summary": "Rate limit exceeded",
+                "value": {
+                  "error": "Rate Limit Exceeded",
+                  "message": "You have exceeded the rate limit of 100 requests per minute",
+                  "code": "RATE_LIMIT_EXCEEDED",
+                  "details": {
+                    "limit": 100,
+                    "window": "minute",
+                    "retryAfter": 30
+                  },
+                  "timestamp": "2024-01-17T10:30:00Z",
+                  "requestId": "req_123456794"
+                }
+              }
+            }
           }
         }
       }
@@ -112,13 +820,31 @@
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "description": "Bearer token authentication using your Yirifi.ai API key. Include your API key in the Authorization header as: `Bearer your_api_key_here`"
       }
     }
   },
   "security": [
     {
       "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Content Management",
+      "description": "Operations for managing categories, templates, and components"
+    },
+    {
+      "name": "Knowledge Base", 
+      "description": "Endpoints for glossaries, FAQs, and Q&A systems"
+    },
+    {
+      "name": "Information Services",
+      "description": "Access to curated news, people data, and use cases"
+    },
+    {
+      "name": "Advanced Features",
+      "description": "AI features, vendor integrations, and advanced functionality"
     }
   ]
 }

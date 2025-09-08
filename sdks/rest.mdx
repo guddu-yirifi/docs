@@ -1,0 +1,917 @@
+---
+title: "REST API"
+description: "Direct HTTP integration examples and best practices"
+---
+
+# REST API Reference
+
+The Yirifi.ai REST API provides direct HTTP access to all platform features. This guide covers HTTP integration patterns, authentication, and best practices for working directly with our REST endpoints.
+
+## Base URL
+
+All API requests should be made to:
+```
+https://api.yirifi.ai/v1
+```
+
+## Authentication
+
+Include your API key in the `Authorization` header with the `Bearer` scheme:
+
+```http
+Authorization: Bearer your_api_key_here
+```
+
+## Content Type
+
+All requests should include the `Content-Type` header:
+
+```http
+Content-Type: application/json
+```
+
+## Categories
+
+### List Categories
+
+<CodeGroup>
+```http HTTP
+GET /category?page=1&limit=20&search=technology HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+```
+
+```bash cURL
+curl -X GET "https://api.yirifi.ai/v1/category?page=1&limit=20&search=technology" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript (fetch)
+const response = await fetch('https://api.yirifi.ai/v1/category?page=1&limit=20', {
+  method: 'GET',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  }
+});
+
+const categories = await response.json();
+```
+
+```python Python (requests)
+import requests
+
+headers = {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get(
+    'https://api.yirifi.ai/v1/category',
+    headers=headers,
+    params={'page': 1, 'limit': 20, 'search': 'technology'}
+)
+
+categories = response.json()
+```
+</CodeGroup>
+
+#### Query Parameters
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `page` | integer | Page number for pagination | 1 |
+| `limit` | integer | Number of items per page (max 100) | 20 |
+| `search` | string | Search term to filter categories | - |
+| `sort` | string | Sort field (`name`, `created_at`) | `created_at` |
+| `order` | string | Sort order (`asc`, `desc`) | `desc` |
+
+<ResponseExample>
+```json 200 OK
+{
+  "items": [
+    {
+      "id": "cat_123",
+      "name": "Technology",
+      "description": "Technology-related content and resources",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": "cat_124",
+      "name": "Business",
+      "description": "Business strategy and management content", 
+      "createdAt": "2024-01-16T14:22:00Z",
+      "updatedAt": "2024-01-16T14:22:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 2,
+    "pages": 1,
+    "hasMore": false
+  }
+}
+```
+</ResponseExample>
+
+### Get Category
+
+<CodeGroup>
+```http HTTP
+GET /category/cat_123 HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+```
+
+```bash cURL
+curl -X GET "https://api.yirifi.ai/v1/category/cat_123" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.yirifi.ai/v1/category/cat_123', {
+  method: 'GET',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  }
+});
+
+const category = await response.json();
+```
+
+```python Python
+response = requests.get(
+    'https://api.yirifi.ai/v1/category/cat_123',
+    headers=headers
+)
+
+category = response.json()
+```
+</CodeGroup>
+
+<ResponseExample>
+```json 200 OK
+{
+  "id": "cat_123",
+  "name": "Technology",
+  "description": "Technology-related content and resources",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+</ResponseExample>
+
+### Create Category
+
+<CodeGroup>
+```http HTTP
+POST /category HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+
+{
+  "name": "New Category",
+  "description": "A new category for organizing content"
+}
+```
+
+```bash cURL
+curl -X POST "https://api.yirifi.ai/v1/category" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "New Category",
+    "description": "A new category for organizing content"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.yirifi.ai/v1/category', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'New Category',
+    description: 'A new category for organizing content'
+  })
+});
+
+const newCategory = await response.json();
+```
+
+```python Python
+data = {
+    'name': 'New Category',
+    'description': 'A new category for organizing content'
+}
+
+response = requests.post(
+    'https://api.yirifi.ai/v1/category',
+    headers=headers,
+    json=data
+)
+
+new_category = response.json()
+```
+</CodeGroup>
+
+#### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Category name (3-100 characters) |
+| `description` | string | No | Category description (max 500 characters) |
+
+<ResponseExample>
+```json 201 Created
+{
+  "id": "cat_125",
+  "name": "New Category",
+  "description": "A new category for organizing content",
+  "createdAt": "2024-01-17T09:15:00Z",
+  "updatedAt": "2024-01-17T09:15:00Z"
+}
+```
+</ResponseExample>
+
+### Update Category
+
+<CodeGroup>
+```http HTTP
+PUT /category/cat_123 HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+
+{
+  "name": "Updated Category Name",
+  "description": "Updated category description"
+}
+```
+
+```bash cURL
+curl -X PUT "https://api.yirifi.ai/v1/category/cat_123" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Category Name",
+    "description": "Updated category description"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.yirifi.ai/v1/category/cat_123', {
+  method: 'PUT',
+  headers: {
+    'Authorization': 'Bearer your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Updated Category Name',
+    description: 'Updated category description'
+  })
+});
+
+const updatedCategory = await response.json();
+```
+
+```python Python
+data = {
+    'name': 'Updated Category Name',
+    'description': 'Updated category description'
+}
+
+response = requests.put(
+    'https://api.yirifi.ai/v1/category/cat_123',
+    headers=headers,
+    json=data
+)
+
+updated_category = response.json()
+```
+</CodeGroup>
+
+<ResponseExample>
+```json 200 OK
+{
+  "id": "cat_123",
+  "name": "Updated Category Name", 
+  "description": "Updated category description",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-17T11:45:00Z"
+}
+```
+</ResponseExample>
+
+### Delete Category
+
+<CodeGroup>
+```http HTTP
+DELETE /category/cat_123 HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+```
+
+```bash cURL
+curl -X DELETE "https://api.yirifi.ai/v1/category/cat_123" \
+  -H "Authorization: Bearer your_api_key"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.yirifi.ai/v1/category/cat_123', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer your_api_key'
+  }
+});
+
+// Check if deletion was successful
+if (response.status === 204) {
+  console.log('Category deleted successfully');
+}
+```
+
+```python Python
+response = requests.delete(
+    'https://api.yirifi.ai/v1/category/cat_123',
+    headers=headers
+)
+
+# Check if deletion was successful
+if response.status_code == 204:
+    print('Category deleted successfully')
+```
+</CodeGroup>
+
+<ResponseExample>
+```http 204 No Content
+```
+</ResponseExample>
+
+## Templates
+
+### List Templates
+
+<CodeGroup>
+```http HTTP
+GET /template?categoryId=cat_123&page=1&limit=20 HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+```
+
+```bash cURL
+curl -X GET "https://api.yirifi.ai/v1/template?categoryId=cat_123&page=1&limit=20" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json"
+```
+</CodeGroup>
+
+#### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `categoryId` | string | Filter by category ID |
+| `page` | integer | Page number |
+| `limit` | integer | Items per page |
+| `search` | string | Search term |
+
+### Create Template
+
+<CodeGroup>
+```http HTTP
+POST /template HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+
+{
+  "name": "Email Template",
+  "categoryId": "cat_123",
+  "content": "<html><body>Hello {{name}}!</body></html>",
+  "variables": ["name"],
+  "type": "email"
+}
+```
+
+```bash cURL
+curl -X POST "https://api.yirifi.ai/v1/template" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Email Template",
+    "categoryId": "cat_123",
+    "content": "<html><body>Hello {{name}}!</body></html>",
+    "variables": ["name"],
+    "type": "email"
+  }'
+```
+</CodeGroup>
+
+## Components
+
+### List Components
+
+<CodeGroup>
+```http HTTP
+GET /component?type=ui&page=1&limit=20 HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+```
+
+```bash cURL
+curl -X GET "https://api.yirifi.ai/v1/component?type=ui&page=1&limit=20" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json"
+```
+</CodeGroup>
+
+### Create Component
+
+<CodeGroup>
+```http HTTP
+POST /component HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+
+{
+  "name": "Button Component",
+  "type": "ui",
+  "properties": {
+    "color": "primary",
+    "size": "medium",
+    "variant": "solid"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "color": {"type": "string", "enum": ["primary", "secondary"]},
+      "size": {"type": "string", "enum": ["small", "medium", "large"]}
+    }
+  }
+}
+```
+
+```bash cURL
+curl -X POST "https://api.yirifi.ai/v1/component" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Button Component",
+    "type": "ui",
+    "properties": {
+      "color": "primary",
+      "size": "medium"
+    }
+  }'
+```
+</CodeGroup>
+
+## Batch Operations
+
+### Batch Create Categories
+
+<CodeGroup>
+```http HTTP
+POST /category/batch HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "name": "Category 1",
+      "description": "First category"
+    },
+    {
+      "name": "Category 2", 
+      "description": "Second category"
+    }
+  ]
+}
+```
+
+```bash cURL
+curl -X POST "https://api.yirifi.ai/v1/category/batch" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [
+      {"name": "Category 1", "description": "First category"},
+      {"name": "Category 2", "description": "Second category"}
+    ]
+  }'
+```
+</CodeGroup>
+
+### Batch Get Categories
+
+<CodeGroup>
+```http HTTP
+POST /category/batch/get HTTP/1.1
+Host: api.yirifi.ai
+Authorization: Bearer your_api_key
+Content-Type: application/json
+
+{
+  "ids": ["cat_123", "cat_124", "cat_125"]
+}
+```
+
+```bash cURL
+curl -X POST "https://api.yirifi.ai/v1/category/batch/get" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ids": ["cat_123", "cat_124", "cat_125"]
+  }'
+```
+</CodeGroup>
+
+## Error Handling
+
+All errors follow a consistent format:
+
+<ResponseExample>
+```json 400 Bad Request
+{
+  "error": "Validation Error",
+  "message": "Request validation failed",
+  "code": "VALIDATION_ERROR",
+  "details": {
+    "field": "name",
+    "message": "Name is required and must be at least 3 characters",
+    "value": "AB"
+  },
+  "timestamp": "2024-01-17T10:30:00Z",
+  "requestId": "req_123456789"
+}
+```
+</ResponseExample>
+
+### Error Response Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Error type |
+| `message` | string | Human-readable error message |
+| `code` | string | Machine-readable error code |
+| `details` | object | Additional error details |
+| `timestamp` | string | ISO 8601 timestamp |
+| `requestId` | string | Unique request identifier |
+
+### Common HTTP Status Codes
+
+| Status | Description | Action |
+|--------|-------------|---------|
+| 200 | OK | Request successful |
+| 201 | Created | Resource created successfully |
+| 204 | No Content | Resource deleted successfully |
+| 400 | Bad Request | Check request body/parameters |
+| 401 | Unauthorized | Check API key |
+| 403 | Forbidden | Check permissions |
+| 404 | Not Found | Resource doesn't exist |
+| 429 | Too Many Requests | Implement retry with backoff |
+| 500 | Internal Server Error | Retry after delay |
+
+## Rate Limiting
+
+Rate limit information is included in response headers:
+
+```http
+HTTP/1.1 200 OK
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 85
+X-RateLimit-Reset: 1642780800
+X-RateLimit-Window: 60
+```
+
+### Rate Limit Headers
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests per window |
+| `X-RateLimit-Remaining` | Remaining requests in current window |
+| `X-RateLimit-Reset` | Unix timestamp when limit resets |
+| `X-RateLimit-Window` | Window duration in seconds |
+
+## Pagination
+
+Most list endpoints support pagination:
+
+### Request Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `page` | integer | Page number (starts at 1) |
+| `limit` | integer | Items per page (max 100) |
+
+### Response Format
+
+```json
+{
+  "items": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "pages": 8,
+    "hasMore": true
+  }
+}
+```
+
+## Request/Response Examples
+
+### Complete Category CRUD Example
+
+<CodeGroup>
+```javascript JavaScript Example
+class YirifiClient {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.baseURL = 'https://api.yirifi.ai/v1';
+  }
+
+  async request(method, endpoint, data = null) {
+    const options = {
+      method,
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    };
+
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+
+    const response = await fetch(`${this.baseURL}${endpoint}`, options);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`API Error: ${error.message}`);
+    }
+
+    return response.status === 204 ? null : await response.json();
+  }
+
+  // Category methods
+  async listCategories(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request('GET', `/category?${query}`);
+  }
+
+  async getCategory(id) {
+    return this.request('GET', `/category/${id}`);
+  }
+
+  async createCategory(data) {
+    return this.request('POST', '/category', data);
+  }
+
+  async updateCategory(id, data) {
+    return this.request('PUT', `/category/${id}`, data);
+  }
+
+  async deleteCategory(id) {
+    return this.request('DELETE', `/category/${id}`);
+  }
+}
+
+// Usage
+const client = new YirifiClient('your_api_key');
+
+try {
+  // Create a category
+  const newCategory = await client.createCategory({
+    name: 'Technology',
+    description: 'Tech-related content'
+  });
+  console.log('Created:', newCategory);
+
+  // List categories
+  const categories = await client.listCategories({ limit: 10 });
+  console.log('Categories:', categories);
+
+  // Update category
+  const updated = await client.updateCategory(newCategory.id, {
+    description: 'Updated description'
+  });
+  console.log('Updated:', updated);
+
+  // Delete category
+  await client.deleteCategory(newCategory.id);
+  console.log('Deleted successfully');
+
+} catch (error) {
+  console.error('Error:', error.message);
+}
+```
+
+```python Python Example
+import requests
+from typing import Optional, Dict, Any
+from urllib.parse import urlencode
+
+class YirifiClient:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = 'https://api.yirifi.ai/v1'
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        })
+
+    def request(self, method: str, endpoint: str, data: Optional[Dict] = None) -> Any:
+        url = f'{self.base_url}{endpoint}'
+        
+        response = self.session.request(method, url, json=data)
+        
+        if not response.ok:
+            error_data = response.json()
+            raise Exception(f"API Error: {error_data.get('message', 'Unknown error')}")
+        
+        return response.json() if response.content else None
+
+    # Category methods
+    def list_categories(self, **params) -> Dict[str, Any]:
+        query = urlencode(params) if params else ''
+        endpoint = f'/category?{query}' if query else '/category'
+        return self.request('GET', endpoint)
+
+    def get_category(self, category_id: str) -> Dict[str, Any]:
+        return self.request('GET', f'/category/{category_id}')
+
+    def create_category(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        return self.request('POST', '/category', data)
+
+    def update_category(self, category_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        return self.request('PUT', f'/category/{category_id}', data)
+
+    def delete_category(self, category_id: str) -> None:
+        self.request('DELETE', f'/category/{category_id}')
+
+# Usage
+client = YirifiClient('your_api_key')
+
+try:
+    # Create a category
+    new_category = client.create_category({
+        'name': 'Technology',
+        'description': 'Tech-related content'
+    })
+    print(f'Created: {new_category}')
+
+    # List categories
+    categories = client.list_categories(limit=10)
+    print(f'Categories: {categories}')
+
+    # Update category
+    updated = client.update_category(new_category['id'], {
+        'description': 'Updated description'
+    })
+    print(f'Updated: {updated}')
+
+    # Delete category
+    client.delete_category(new_category['id'])
+    print('Deleted successfully')
+
+except Exception as error:
+    print(f'Error: {error}')
+```
+</CodeGroup>
+
+## Best Practices
+
+### 1. Always Include Required Headers
+
+```http
+Authorization: Bearer your_api_key
+Content-Type: application/json
+```
+
+### 2. Handle Rate Limits Gracefully
+
+```javascript
+async function makeRequestWithRetry(url, options, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+    
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('Retry-After')) || Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+      continue;
+    }
+    
+    return response;
+  }
+}
+```
+
+### 3. Validate Data Before Sending
+
+```javascript
+function validateCategoryData(data) {
+  if (!data.name || data.name.length < 3) {
+    throw new Error('Name must be at least 3 characters');
+  }
+  if (data.description && data.description.length > 500) {
+    throw new Error('Description must be less than 500 characters');
+  }
+}
+```
+
+### 4. Use Appropriate HTTP Methods
+
+- `GET` - Retrieve data
+- `POST` - Create new resources
+- `PUT` - Update entire resources
+- `PATCH` - Partial updates (when supported)
+- `DELETE` - Remove resources
+
+### 5. Handle Errors Appropriately
+
+```python
+def handle_api_response(response):
+    if response.status_code >= 400:
+        error_data = response.json()
+        
+        # Handle specific error codes
+        if response.status_code == 401:
+            raise AuthenticationError("Invalid API key")
+        elif response.status_code == 429:
+            retry_after = int(response.headers.get('Retry-After', 60))
+            raise RateLimitError(f"Rate limited. Retry after {retry_after} seconds")
+        else:
+            raise APIError(f"API Error: {error_data.get('message', 'Unknown error')}")
+    
+    return response.json() if response.content else None
+```
+
+## Testing with cURL
+
+Test endpoints quickly with cURL:
+
+<CodeGroup>
+```bash Test Authentication
+curl -X GET "https://api.yirifi.ai/v1/category" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -w "\nStatus: %{http_code}\n"
+```
+
+```bash Create and Test
+# Create category
+CATEGORY_ID=$(curl -X POST "https://api.yirifi.ai/v1/category" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test Category", "description": "Test"}' \
+  -s | jq -r '.id')
+
+# Get the created category
+curl -X GET "https://api.yirifi.ai/v1/category/$CATEGORY_ID" \
+  -H "Authorization: Bearer your_api_key" \
+  -H "Content-Type: application/json"
+
+# Clean up
+curl -X DELETE "https://api.yirifi.ai/v1/category/$CATEGORY_ID" \
+  -H "Authorization: Bearer your_api_key"
+```
+</CodeGroup>
+
+## Postman Collection
+
+We provide a Postman collection for easy API testing:
+
+1. Download the collection: [Yirifi API Collection](https://api.yirifi.ai/postman/collection.json)
+2. Import into Postman
+3. Set your API key in the collection variables
+4. Start testing endpoints
+
+## OpenAPI Specification
+
+Full OpenAPI 3.0 specification available at:
+- JSON: [https://api.yirifi.ai/openapi.json](https://api.yirifi.ai/openapi.json)  
+- YAML: [https://api.yirifi.ai/openapi.yaml](https://api.yirifi.ai/openapi.yaml)
+
+## Support
+
+- **API Status**: [status.yirifi.ai](https://status.yirifi.ai)
+- **Support**: [support@yirifi.ai](mailto:support@yirifi.ai)  
+- **Documentation**: [docs.yirifi.ai](https://docs.yirifi.ai)
+- **Community**: [Discord](https://discord.gg/yirifi)

@@ -1,29 +1,29 @@
 {
   "$schema": "https://mintlify.com/schema.json",
-  "name": "Your API Documentation",
+  "name": "Yirifi.ai API Documentation",
   "logo": {
     "dark": "/logo/dark.svg",
     "light": "/logo/light.svg"
   },
   "favicon": "/favicon.svg",
   "colors": {
-    "primary": "#0D9373",
-    "light": "#07C983",
-    "dark": "#0D9373",
+    "primary": "#2563eb",
+    "light": "#3b82f6",
+    "dark": "#1d4ed8",
     "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
+      "from": "#2563eb",
+      "to": "#3b82f6"
     }
   },
   "topbarLinks": [
     {
       "name": "Support",
-      "url": "mailto:support@yourcompany.com"
+      "url": "mailto:support@yirifi.ai"
     }
   ],
   "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://your-dashboard.com"
+    "name": "Get API Key",
+    "url": "https://yirifi.ai/dashboard"
   },
   "tabs": [
     {
@@ -33,23 +33,27 @@
     {
       "name": "Guides",
       "url": "guides"
+    },
+    {
+      "name": "SDKs",
+      "url": "sdks"
     }
   ],
   "anchors": [
     {
-      "name": "Documentation",
-      "icon": "book-open-cover",
-      "url": "https://mintlify.com/docs"
+      "name": "Website",
+      "icon": "globe",
+      "url": "https://yirifi.ai"
     },
     {
-      "name": "Community",
-      "icon": "slack",
-      "url": "https://mintlify.com/community"
+      "name": "Dashboard",
+      "icon": "chart-line",
+      "url": "https://yirifi.ai/dashboard"
     },
     {
-      "name": "Blog",
-      "icon": "newspaper",
-      "url": "https://mintlify.com/blog"
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/yirifi"
     }
   ],
   "navigation": [
@@ -58,19 +62,39 @@
       "pages": ["introduction", "quickstart", "authentication"]
     },
     {
-      "group": "API Documentation",
+      "group": "Core Features",
       "pages": [
-        "api-reference/category/endpoints",
-        "api-reference/component/endpoints", 
-        "api-reference/template/endpoints",
-        "api-reference/people/endpoints",
+        {
+          "group": "Content Management",
+          "pages": [
+            "api-reference/category/endpoints",
+            "api-reference/template/endpoints",
+            "api-reference/component/endpoints"
+          ]
+        },
+        {
+          "group": "Knowledge Base",
+          "pages": [
+            "api-reference/glossary/endpoints",
+            "api-reference/faq/endpoints",
+            "api-reference/question/endpoints"
+          ]
+        },
+        {
+          "group": "Information Services",
+          "pages": [
+            "api-reference/news/endpoints",
+            "api-reference/people/endpoints",
+            "api-reference/usecase/endpoints"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Advanced Features",
+      "pages": [
         "api-reference/feature/endpoints",
-        "api-reference/glossary/endpoints",
-        "api-reference/news/endpoints",
-        "api-reference/question/endpoints",
-        "api-reference/usecase/endpoints",
-        "api-reference/vendor/endpoints",
-        "api-reference/faq/endpoints"
+        "api-reference/vendor/endpoints"
       ]
     },
     {
@@ -78,19 +102,33 @@
       "pages": [
         "guides/authentication",
         "guides/rate-limiting", 
-        "guides/error-handling"
+        "guides/error-handling",
+        "guides/webhooks",
+        "guides/best-practices"
+      ]
+    },
+    {
+      "group": "SDKs",
+      "pages": [
+        "sdks/javascript",
+        "sdks/python",
+        "sdks/rest"
       ]
     }
   ],
   "footerSocials": {
-    "twitter": "https://twitter.com/yourcompany",
-    "github": "https://github.com/yourcompany",
-    "linkedin": "https://www.linkedin.com/company/yourcompany"
+    "twitter": "https://twitter.com/yirifi_ai",
+    "github": "https://github.com/yirifi",
+    "linkedin": "https://www.linkedin.com/company/yirifi"
   },
   "api": {
-    "baseUrl": "https://your-api-domain.com/api/external",
+    "baseUrl": "https://api.yirifi.ai/v1",
     "auth": {
-      "method": "bearer"
+      "method": "bearer",
+      "name": "Authorization"
+    },
+    "playground": {
+      "mode": "show"
     }
   },
   "openapi": "/api-reference/openapi.json"

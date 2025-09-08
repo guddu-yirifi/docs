@@ -1,0 +1,507 @@
+---
+title: "Webhooks"
+description: "Receive real-time notifications about events in your Yirifi.ai account"
+---
+
+# Webhooks
+
+Webhooks allow your application to receive real-time notifications when events occur in your Yirifi.ai account. Instead of constantly polling our API for changes, webhooks push updates directly to your application.
+
+## Overview
+
+When you configure a webhook endpoint, Yirifi.ai will send HTTP POST requests to that URL whenever subscribed events occur. This enables you to:
+
+- React instantly to data changes
+- Keep your application synchronized
+- Reduce API calls and improve performance
+- Build responsive, event-driven applications
+
+## Setting Up Webhooks
+
+### 1. Create an Endpoint
+
+First, create an endpoint in your application to receive webhook events:
+
+<CodeGroup>
+```javascript Express.js
+const express = require('express');
+const crypto = require('crypto');
+const app = express();
+
+app.use(express.json());
+
+app.post('/webhooks/yirifi', (req, res) => {
+  const signature = req.headers['x-yirifi-signature'];
+  const payload = JSON.stringify(req.body);
+  
+  // Verify webhook signature (see security section)
+  if (!verifySignature(payload, signature)) {
+    return res.status(401).send('Unauthorized');
+  }
+  
+  // Handle the event
+  const event = req.body;
+  console.log(`Received ${event.type} event:`, event.data);
+  
+  // Process the event based on type
+  switch (event.type) {
+    case 'category.created':
+      handleCategoryCreated(event.data);
+      break;
+    case 'category.updated':
+      handleCategoryUpdated(event.data);
+      break;
+    case 'category.deleted':
+      handleCategoryDeleted(event.data);
+      break;
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+  
+  res.status(200).send('OK');
+});
+
+function verifySignature(payload, signature) {
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.YIRIFI_WEBHOOK_SECRET)
+    .update(payload)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+}
+```
+
+```python Flask
+from flask import Flask, request, jsonify
+import hashlib
+import hmac
+import json
+import os
+
+app = Flask(__name__)
+
+@app.route('/webhooks/yirifi', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('X-Yirifi-Signature')
+    payload = request.get_data()
+    
+    # Verify webhook signature
+    if not verify_signature(payload, signature):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Parse the event
+    event = request.get_json()
+    print(f"Received {event['type']} event: {event['data']}")
+    
+    # Handle event based on type
+    if event['type'] == 'category.created':
+        handle_category_created(event['data'])
+    elif event['type'] == 'category.updated':
+        handle_category_updated(event['data'])
+    elif event['type'] == 'category.deleted':
+        handle_category_deleted(event['data'])
+    else:
+        print(f"Unhandled event type: {event['type']}")
+    
+    return jsonify({'status': 'success'}), 200
+
+def verify_signature(payload, signature):
+    expected_signature = hmac.new(
+        os.environ['YIRIFI_WEBHOOK_SECRET'].encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(signature, expected_signature)
+```
+</CodeGroup>
+
+### 2. Register Your Webhook
+
+Register your webhook endpoint with Yirifi.ai via the dashboard or API:
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.yirifi.ai/v1/webhooks" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-app.com/webhooks/yirifi",
+    "events": ["category.created", "category.updated", "category.deleted"],
+    "secret": "your-webhook-secret"
+  }'
+```
+
+```javascript JavaScript
+const webhook = await fetch('https://api.yirifi.ai/v1/webhooks', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    url: 'https://your-app.com/webhooks/yirifi',
+    events: ['category.created', 'category.updated', 'category.deleted'],
+    secret: 'your-webhook-secret'
+  })
+});
+
+const webhookData = await webhook.json();
+console.log('Webhook registered:', webhookData);
+```
+</CodeGroup>
+
+## Event Types
+
+Yirifi.ai sends webhooks for these event types:
+
+### Content Management Events
+
+<AccordionGroup>
+  <Accordion title="category.created">
+    Triggered when a new category is created.
+    ```json
+    {
+      "type": "category.created",
+      "data": {
+        "id": "cat_123",
+        "name": "New Category",
+        "description": "Category description",
+        "createdAt": "2024-01-17T10:30:00Z"
+      },
+      "timestamp": "2024-01-17T10:30:01Z",
+      "id": "evt_456"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="category.updated">
+    Triggered when a category is modified.
+    ```json
+    {
+      "type": "category.updated",
+      "data": {
+        "id": "cat_123",
+        "name": "Updated Category Name",
+        "description": "New description",
+        "updatedAt": "2024-01-17T11:30:00Z",
+        "changes": ["name", "description"]
+      },
+      "timestamp": "2024-01-17T11:30:01Z",
+      "id": "evt_457"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="category.deleted">
+    Triggered when a category is deleted.
+    ```json
+    {
+      "type": "category.deleted",
+      "data": {
+        "id": "cat_123",
+        "deletedAt": "2024-01-17T12:30:00Z"
+      },
+      "timestamp": "2024-01-17T12:30:01Z",
+      "id": "evt_458"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Template Events
+
+<AccordionGroup>
+  <Accordion title="template.created">
+    ```json
+    {
+      "type": "template.created",
+      "data": {
+        "id": "tpl_789",
+        "name": "New Template",
+        "categoryId": "cat_123",
+        "createdAt": "2024-01-17T10:30:00Z"
+      },
+      "timestamp": "2024-01-17T10:30:01Z",
+      "id": "evt_459"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Component Events
+
+<AccordionGroup>
+  <Accordion title="component.created">
+    ```json
+    {
+      "type": "component.created",
+      "data": {
+        "id": "cmp_101",
+        "name": "New Component",
+        "type": "widget",
+        "createdAt": "2024-01-17T10:30:00Z"
+      },
+      "timestamp": "2024-01-17T10:30:01Z",
+      "id": "evt_460"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Webhook Security
+
+### Signature Verification
+
+All webhooks include a signature in the `X-Yirifi-Signature` header. Always verify this signature:
+
+<CodeGroup>
+```javascript Node.js
+const crypto = require('crypto');
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload, 'utf8')
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+
+// Usage
+const isValid = verifyWebhookSignature(
+  JSON.stringify(req.body),
+  req.headers['x-yirifi-signature'],
+  process.env.YIRIFI_WEBHOOK_SECRET
+);
+```
+
+```python Python
+import hashlib
+import hmac
+
+def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
+    expected_signature = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(signature, expected_signature)
+
+# Usage
+is_valid = verify_webhook_signature(
+    request.get_data(),
+    request.headers.get('X-Yirifi-Signature'),
+    os.environ['YIRIFI_WEBHOOK_SECRET']
+)
+```
+</CodeGroup>
+
+### Best Practices
+
+<Tip>
+**Use HTTPS**: Always use HTTPS endpoints for webhooks to ensure data is encrypted in transit.
+</Tip>
+
+<Tip>
+**Validate Signatures**: Always verify webhook signatures to ensure requests are legitimate.
+</Tip>
+
+<Tip>
+**Handle Idempotency**: Use the event `id` to ensure you don't process the same event multiple times.
+</Tip>
+
+## Handling Webhook Delivery
+
+### Retry Logic
+
+Yirifi.ai will retry failed webhook deliveries with exponential backoff:
+
+- Initial retry: after 1 second
+- Second retry: after 5 seconds  
+- Third retry: after 25 seconds
+- Final retry: after 125 seconds
+
+### Response Requirements
+
+Your webhook endpoint should:
+
+- Respond with a `2xx` status code for successful processing
+- Respond within 30 seconds
+- Return a `4xx` status code for client errors (won't be retried)
+- Return a `5xx` status code for server errors (will be retried)
+
+<CodeGroup>
+```javascript Express.js
+app.post('/webhooks/yirifi', async (req, res) => {
+  try {
+    // Process the webhook
+    await processWebhook(req.body);
+    
+    // Respond with success
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    
+    // Return appropriate error status
+    if (error.type === 'validation') {
+      res.status(400).json({ error: 'Invalid data' });
+    } else {
+      res.status(500).json({ error: 'Internal error' });
+    }
+  }
+});
+```
+
+```python Flask
+@app.route('/webhooks/yirifi', methods=['POST'])
+def handle_webhook():
+    try:
+        # Process the webhook
+        process_webhook(request.get_json())
+        
+        # Return success
+        return jsonify({'received': True}), 200
+    except ValidationError as e:
+        # Client error - won't be retried
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        # Server error - will be retried
+        app.logger.error(f'Webhook error: {e}')
+        return jsonify({'error': 'Internal error'}), 500
+```
+</CodeGroup>
+
+## Testing Webhooks
+
+### Local Development
+
+Use tools like ngrok to expose your local development server:
+
+```bash
+# Install ngrok
+npm install -g ngrok
+
+# Expose your local server
+ngrok http 3000
+
+# Use the ngrok URL for webhook registration
+# https://abc123.ngrok.io/webhooks/yirifi
+```
+
+### Webhook Testing Tool
+
+Create a simple webhook testing endpoint:
+
+<CodeGroup>
+```javascript Testing Endpoint
+app.post('/webhooks/test', (req, res) => {
+  console.log('=== Webhook Received ===');
+  console.log('Headers:', req.headers);
+  console.log('Body:', JSON.stringify(req.body, null, 2));
+  console.log('========================');
+  
+  res.status(200).json({
+    message: 'Webhook received successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+```
+
+```python Testing Endpoint
+@app.route('/webhooks/test', methods=['POST'])
+def test_webhook():
+    print('=== Webhook Received ===')
+    print(f'Headers: {dict(request.headers)}')
+    print(f'Body: {json.dumps(request.get_json(), indent=2)}')
+    print('========================')
+    
+    return jsonify({
+        'message': 'Webhook received successfully',
+        'timestamp': datetime.utcnow().isoformat()
+    }), 200
+```
+</CodeGroup>
+
+## Managing Webhooks
+
+### List Webhooks
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.yirifi.ai/v1/webhooks"
+```
+
+### Update Webhook
+
+```bash
+curl -X PUT "https://api.yirifi.ai/v1/webhooks/webhook_123" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": ["category.created", "template.created"]
+  }'
+```
+
+### Delete Webhook
+
+```bash
+curl -X DELETE "https://api.yirifi.ai/v1/webhooks/webhook_123" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Webhook not receiving events">
+    - Verify your endpoint is publicly accessible
+    - Check your webhook is registered for the correct events
+    - Ensure your endpoint responds with 2xx status codes
+    - Verify SSL certificate is valid (for HTTPS endpoints)
+  </Accordion>
+  
+  <Accordion title="Signature verification failing">
+    - Ensure you're using the correct webhook secret
+    - Verify you're hashing the raw request body, not parsed JSON
+    - Check you're comparing signatures correctly (use timing-safe comparison)
+  </Accordion>
+  
+  <Accordion title="Duplicate events">
+    - Use the event `id` to implement idempotency
+    - Store processed event IDs to prevent duplicate processing
+  </Accordion>
+</AccordionGroup>
+
+### Debug Mode
+
+Enable debug mode in your webhook handler:
+
+```javascript
+const DEBUG = process.env.NODE_ENV === 'development';
+
+app.post('/webhooks/yirifi', (req, res) => {
+  if (DEBUG) {
+    console.log('=== DEBUG: Webhook Details ===');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('Signature:', req.headers['x-yirifi-signature']);
+  }
+  
+  // ... rest of handler
+});
+```
+
+## Next Steps
+
+- [API Reference - Webhooks](/api-reference/webhooks/endpoints) - Complete webhook API documentation
+- [Error Handling](/guides/error-handling) - Handle webhook processing errors
+- [Best Practices](/guides/best-practices) - Webhook implementation best practices

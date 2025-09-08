@@ -1,0 +1,153 @@
+---
+title: "Authentication"
+description: "Learn how to authenticate with the Yirifi.ai API using bearer tokens"
+---
+
+# Authentication
+
+The Yirifi.ai API uses Bearer token authentication. You'll need to include your API key in the `Authorization` header of every request to access our endpoints.
+
+## Base URL
+
+All API requests should be made to:
+```
+https://api.yirifi.ai/v1
+```
+
+## Getting Your API Key
+
+<Steps>
+  <Step title="Sign up for Yirifi.ai">
+    Create your account at [yirifi.ai](https://yirifi.ai) if you haven't already.
+  </Step>
+  <Step title="Access your dashboard">
+    Log in to your [dashboard](https://yirifi.ai/dashboard) and navigate to the API Keys section.
+  </Step>
+  <Step title="Generate API key">
+    Click "Generate New API Key" and copy the key securely.
+  </Step>
+  <Step title="Test your key">
+    Make a test request to verify your API key is working correctly.
+  </Step>
+</Steps>
+
+<Warning>
+  **Keep your API keys secure!** Never share them publicly or commit them to version control. Store them as environment variables in your applications.
+</Warning>
+
+## Making Authenticated Requests
+
+Include your API key in the `Authorization` header with the `Bearer` prefix:
+
+<CodeGroup>
+```bash cURL
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.yirifi.ai/v1/category"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.yirifi.ai/v1/category', {
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get('https://api.yirifi.ai/v1/category', headers=headers)
+```
+</CodeGroup>
+
+## Authentication Errors
+
+If authentication fails, you'll receive one of these error responses:
+
+<ResponseExample>
+```json 401 Unauthorized
+{
+  "error": "Unauthorized",
+  "message": "Invalid or missing API key",
+  "code": "INVALID_API_KEY"
+}
+```
+</ResponseExample>
+
+<ResponseExample>
+```json 403 Forbidden  
+{
+  "error": "Forbidden",
+  "message": "API key does not have permission for this resource",
+  "code": "INSUFFICIENT_PERMISSIONS"
+}
+```
+</ResponseExample>
+
+## Best Practices
+
+<Tip>
+  **Environment Variables**: Store your API key as an environment variable rather than hardcoding it in your application.
+</Tip>
+
+<Tip>
+  **Key Rotation**: Regularly rotate your API keys for enhanced security. Generate new keys and update your applications before revoking old ones.
+</Tip>
+
+<Tip>
+  **Rate Limiting**: Be aware of rate limits when making requests. See our [rate limiting guide](/guides/rate-limiting) for more details.
+</Tip>
+
+## Testing Your Authentication
+
+You can test your API key with a simple request to any endpoint:
+
+<CodeGroup>
+```bash Test Request
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.yirifi.ai/v1/category" \
+  -w "\nStatus: %{http_code}\n"
+```
+
+```javascript Test with JavaScript
+async function testAuth() {
+  try {
+    const response = await fetch('https://api.yirifi.ai/v1/category', {
+      headers: {
+        'Authorization': 'Bearer YOUR_API_KEY'
+      }
+    });
+    
+    if (response.ok) {
+      console.log('Authentication successful!');
+      const data = await response.json();
+      console.log('Response:', data);
+    } else {
+      console.log('Authentication failed:', response.status);
+    }
+  } catch (error) {
+    console.error('Request failed:', error);
+  }
+}
+
+testAuth();
+```
+</CodeGroup>
+
+<Check>
+  **Success**: If your API key is valid, you'll receive a `200 OK` response with the requested data.
+</Check>
+
+## Next Steps
+
+Now that you're authenticated, you can start exploring our API endpoints:
+
+- [Quickstart Guide](/quickstart) - Make your first API call
+- [Content Management](/api-reference/category/endpoints) - Manage categories and content
+- [Rate Limiting](/guides/rate-limiting) - Understand API limits

@@ -1,0 +1,330 @@
+---
+title: "Rate Limiting"
+description: "Understand API rate limits and optimization strategies for the Yirifi.ai API"
+---
+
+# Rate Limiting
+
+The Yirifi.ai API implements rate limiting to ensure fair usage and optimal performance for all users. This guide explains our rate limits, how to handle them, and best practices for optimization.
+
+## Rate Limits Overview
+
+Our API uses a **token bucket** algorithm with the following limits:
+
+<CardGroup cols={2}>
+  <Card title="Free Tier" icon="gift">
+    - **100 requests/minute**
+    - **1,000 requests/day**
+    - Suitable for development and testing
+  </Card>
+  
+  <Card title="Pro Tier" icon="crown">
+    - **1,000 requests/minute**  
+    - **50,000 requests/day**
+    - Perfect for production applications
+  </Card>
+</CardGroup>
+
+<Info>
+Rate limits are applied per API key and reset at the beginning of each time window.
+</Info>
+
+## Rate Limit Headers
+
+Every API response includes headers to help you track your usage:
+
+```http
+HTTP/1.1 200 OK
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 85
+X-RateLimit-Reset: 1642780800
+X-RateLimit-Window: 60
+```
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests allowed in the current window |
+| `X-RateLimit-Remaining` | Number of requests remaining in current window |
+| `X-RateLimit-Reset` | Unix timestamp when the rate limit resets |
+| `X-RateLimit-Window` | Rate limit window duration in seconds |
+
+## Handling Rate Limits
+
+When you exceed the rate limit, you'll receive a `429 Too Many Requests` response:
+
+<ResponseExample>
+```json 429 Too Many Requests
+{
+  "error": "Rate limit exceeded",
+  "message": "You have exceeded the rate limit of 100 requests per minute",
+  "code": "RATE_LIMIT_EXCEEDED",
+  "retryAfter": 30
+}
+```
+</ResponseExample>
+
+### Implementing Exponential Backoff
+
+Here's how to handle rate limits gracefully in your applications:
+
+<CodeGroup>
+```javascript JavaScript
+async function makeRequestWithRetry(url, options, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('Retry-After')) || Math.pow(2, attempt);
+        console.log(`Rate limited. Retrying after ${retryAfter} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        continue;
+      }
+      
+      return response;
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+}
+
+// Usage
+const response = await makeRequestWithRetry('https://api.yirifi.ai/v1/category', {
+  headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+});
+```
+
+```python Python
+import time
+import requests
+from typing import Optional
+
+def make_request_with_retry(url: str, headers: dict, max_retries: int = 3) -> Optional[requests.Response]:
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 2 ** attempt))
+                print(f"Rate limited. Retrying after {retry_after} seconds...")
+                time.sleep(retry_after)
+                continue
+            
+            return response
+            
+        except requests.RequestException as e:
+            if attempt == max_retries:
+                raise e
+            time.sleep(2 ** attempt)
+    
+    return None
+
+# Usage
+headers = {'Authorization': 'Bearer YOUR_API_KEY'}
+response = make_request_with_retry('https://api.yirifi.ai/v1/category', headers)
+```
+</CodeGroup>
+
+## Best Practices
+
+### 1. Monitor Your Usage
+
+Regularly check your rate limit headers to avoid surprises:
+
+<CodeGroup>
+```javascript JavaScript
+const response = await fetch('https://api.yirifi.ai/v1/category', {
+  headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+});
+
+const remaining = response.headers.get('X-RateLimit-Remaining');
+const limit = response.headers.get('X-RateLimit-Limit');
+
+console.log(`Rate limit: ${remaining}/${limit} requests remaining`);
+
+// Warn when approaching limit
+if (remaining / limit < 0.1) {
+  console.warn('Approaching rate limit!');
+}
+```
+
+```python Python
+response = requests.get('https://api.yirifi.ai/v1/category', headers=headers)
+
+remaining = int(response.headers.get('X-RateLimit-Remaining', 0))
+limit = int(response.headers.get('X-RateLimit-Limit', 100))
+
+print(f"Rate limit: {remaining}/{limit} requests remaining")
+
+# Warn when approaching limit
+if remaining / limit < 0.1:
+    print("Warning: Approaching rate limit!")
+```
+</CodeGroup>
+
+### 2. Implement Request Queuing
+
+For applications with high request volumes, implement a queue system:
+
+```javascript
+class APIQueue {
+  constructor(rateLimit = 100, windowMs = 60000) {
+    this.requests = [];
+    this.rateLimit = rateLimit;
+    this.windowMs = windowMs;
+    this.processing = false;
+  }
+
+  async add(requestFn) {
+    return new Promise((resolve, reject) => {
+      this.requests.push({ requestFn, resolve, reject });
+      this.process();
+    });
+  }
+
+  async process() {
+    if (this.processing || this.requests.length === 0) return;
+    
+    this.processing = true;
+    
+    while (this.requests.length > 0) {
+      const { requestFn, resolve, reject } = this.requests.shift();
+      
+      try {
+        const result = await requestFn();
+        resolve(result);
+        
+        // Wait between requests to respect rate limits
+        await new Promise(r => setTimeout(r, this.windowMs / this.rateLimit));
+      } catch (error) {
+        reject(error);
+      }
+    }
+    
+    this.processing = false;
+  }
+}
+
+// Usage
+const queue = new APIQueue();
+const result = await queue.add(() => 
+  fetch('https://api.yirifi.ai/v1/category', {
+    headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+  })
+);
+```
+
+### 3. Cache Responses
+
+Reduce API calls by caching responses when appropriate:
+
+<CodeGroup>
+```javascript JavaScript
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getCachedCategories() {
+  const cacheKey = 'categories';
+  const cached = cache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  
+  const response = await fetch('https://api.yirifi.ai/v1/category', {
+    headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+  });
+  
+  const data = await response.json();
+  cache.set(cacheKey, { data, timestamp: Date.now() });
+  
+  return data;
+}
+```
+
+```python Python
+import time
+from typing import Dict, Any
+
+class SimpleCache:
+    def __init__(self, ttl: int = 300):  # 5 minutes
+        self.cache: Dict[str, Dict[str, Any]] = {}
+        self.ttl = ttl
+    
+    def get(self, key: str) -> Any:
+        if key in self.cache:
+            if time.time() - self.cache[key]['timestamp'] < self.ttl:
+                return self.cache[key]['data']
+            else:
+                del self.cache[key]
+        return None
+    
+    def set(self, key: str, value: Any):
+        self.cache[key] = {'data': value, 'timestamp': time.time()}
+
+cache = SimpleCache()
+
+def get_cached_categories():
+    cached = cache.get('categories')
+    if cached:
+        return cached
+    
+    response = requests.get('https://api.yirifi.ai/v1/category', headers=headers)
+    data = response.json()
+    cache.set('categories', data)
+    
+    return data
+```
+</CodeGroup>
+
+### 4. Batch Operations
+
+When possible, use batch operations to reduce the number of API calls:
+
+```javascript
+// Instead of multiple individual requests
+const categories = await Promise.all([
+  fetch('https://api.yirifi.ai/v1/category/1'),
+  fetch('https://api.yirifi.ai/v1/category/2'),
+  fetch('https://api.yirifi.ai/v1/category/3')
+]);
+
+// Consider if batch endpoints are available
+const batchResponse = await fetch('https://api.yirifi.ai/v1/category/batch', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ ids: ['1', '2', '3'] })
+});
+```
+
+## Monitoring and Alerting
+
+Set up monitoring for your API usage:
+
+<Tip>
+**Dashboard Monitoring**: Check your API usage dashboard regularly at [yirifi.ai/dashboard](https://yirifi.ai/dashboard) to track your usage patterns.
+</Tip>
+
+<Tip>
+**Automated Alerts**: Set up alerts to notify you when you're approaching your rate limits, allowing you to optimize or upgrade your plan proactively.
+</Tip>
+
+## Upgrading Your Plan
+
+If you consistently hit rate limits, consider upgrading your plan:
+
+<Card title="Upgrade to Pro" icon="arrow-up" href="https://yirifi.ai/dashboard/billing">
+  Get higher rate limits and additional features with our Pro plan
+</Card>
+
+## Need Help?
+
+If you're experiencing issues with rate limiting or need custom rate limits for your application:
+
+- Email our support team: [support@yirifi.ai](mailto:support@yirifi.ai)
+- Check our [status page](https://status.yirifi.ai) for any ongoing issues
+- Review our [best practices guide](/guides/best-practices) for optimization tips

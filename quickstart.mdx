@@ -1,80 +1,203 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get started with Yirifi.ai API in under 5 minutes"
 ---
 
-## Get started in three steps
+# Quickstart Guide
 
-Get your documentation site running locally and make your first customization.
+Get up and running with the Yirifi.ai API in just a few steps. This guide will walk you through making your first API call and exploring key features.
 
-### Step 1: Set up your local environment
+## Get your API key
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Before you can start using the Yirifi.ai API, you'll need to get your API key.
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Sign up">
+    Create your free account at [yirifi.ai](https://yirifi.ai)
+  </Step>
+  <Step title="Get your API key">
+    Navigate to your [dashboard](https://yirifi.ai/dashboard) and generate your API key
+  </Step>
+  <Step title="Save your key">
+    Store your API key securely - you'll need it for all requests
+  </Step>
+</Steps>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Warning>
+Keep your API key secure and never share it publicly or commit it to version control.
+</Warning>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Make your first request
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Let's start by fetching all categories to see what's available in your Yirifi.ai account.
 
-### Step 3: Go live
+<CodeGroup>
+```bash cURL
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://api.yirifi.ai/v1/category"
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```javascript JavaScript
+const response = await fetch('https://api.yirifi.ai/v1/category', {
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+});
+
+const categories = await response.json();
+console.log(categories);
+```
+
+```python Python
+import requests
+
+headers = {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get('https://api.yirifi.ai/v1/category', headers=headers)
+categories = response.json()
+print(categories)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json Response
+[
+  {
+    "id": "cat_123",
+    "name": "Technology",
+    "description": "Technology-related content and resources",
+    "createdAt": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": "cat_124", 
+    "name": "Business",
+    "description": "Business strategy and management content",
+    "createdAt": "2024-01-16T14:22:00Z"
+  }
+]
+```
+</ResponseExample>
+
+## Create your first category
+
+Now let's create a new category to organize your content.
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.yirifi.ai/v1/category" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My First Category",
+    "description": "A category created via the API"
+  }'
+```
+
+```javascript JavaScript
+const newCategory = await fetch('https://api.yirifi.ai/v1/category', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'My First Category',
+    description: 'A category created via the API'
+  })
+});
+
+const category = await newCategory.json();
+console.log('Created category:', category);
+```
+
+```python Python
+import requests
+
+data = {
+    'name': 'My First Category',
+    'description': 'A category created via the API'
+}
+
+response = requests.post(
+    'https://api.yirifi.ai/v1/category',
+    headers=headers,
+    json=data
+)
+
+category = response.json()
+print('Created category:', category)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json Response
+{
+  "id": "cat_125",
+  "name": "My First Category",
+  "description": "A category created via the API",
+  "createdAt": "2024-01-17T09:15:00Z"
+}
+```
+</ResponseExample>
+
+<Check>
+**Success!** You've successfully created your first category using the Yirifi.ai API.
+</Check>
+
+## Explore more features
+
+Now that you've made your first API calls, explore what else you can build with Yirifi.ai:
+
+<CardGroup cols={2}>
+  <Card title="Content Management" icon="folder-open" href="/api-reference/category/endpoints">
+    Organize content with categories, templates, and components
+  </Card>
+  
+  <Card title="Knowledge Base" icon="book-open" href="/api-reference/glossary/endpoints">
+    Build glossaries, FAQs, and Q&A systems
+  </Card>
+  
+  <Card title="Information Services" icon="newspaper" href="/api-reference/news/endpoints">
+    Access curated news and people data
+  </Card>
+  
+  <Card title="Advanced Features" icon="sparkles" href="/api-reference/feature/endpoints">
+    Leverage AI features and integrations
+  </Card>
+</CardGroup>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
+<AccordionGroup>
+  <Accordion icon="key" title="Authentication Deep Dive">
+    Learn about secure authentication, token management, and best practices in our [authentication guide](/authentication).
+  </Accordion>
+  
+  <Accordion icon="gauge" title="Rate Limits & Best Practices">
+    Understand API limits and optimization strategies in our [rate limiting guide](/guides/rate-limiting).
+  </Accordion>
+  
+  <Accordion icon="exclamation-triangle" title="Error Handling">
+    Learn how to handle errors gracefully with our comprehensive [error handling guide](/guides/error-handling).
+  </Accordion>
+  
+  <Accordion icon="code" title="SDKs & Libraries">
+    Speed up development with our official [JavaScript](/sdks/javascript) and [Python](/sdks/python) SDKs.
+  </Accordion>
+</AccordionGroup>
+
+## Need help?
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="API Reference" icon="book" href="/api-reference/category/endpoints">
+    Comprehensive documentation for all endpoints
+  </Card>
+  
+  <Card title="Support" icon="life-ring" href="mailto:support@yirifi.ai">
+    Get help from our support team
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
